@@ -1,0 +1,29 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <style>
+      body {
+        font-family: Arial;
+        font-size: 1.2em;
+        display: flex;
+        justify-content: center;
+      }
+
+      .content {
+        width: 640px;
+      }
+    </style>
+  </head>
+  <body>
+    <main class='content'>
+      <h1>Hi there</h1>
+
+      <form action='{{.AuthPrefix}}/lastlogin' method='POST'>
+        <button type='submit'>LastLogin</button>
+      </form>
+    </main>
+  </body>
+</html>
