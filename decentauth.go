@@ -60,6 +60,8 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 		//if err != nil {
 		//	return
 		//}
+	} else {
+		store = opt.KvStore
 	}
 
 	mux := http.NewServeMux()

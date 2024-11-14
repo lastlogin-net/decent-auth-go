@@ -4,6 +4,8 @@ github.com/philippgille/gokv v0.7.0 h1:rQSIQspete82h78Br7k7rKUZ8JYy/hWlwzm/W5qob
 github.com/philippgille/gokv v0.7.0/go.mod h1:OwiTP/3bhEBhSuOmFmq1+rszglfSgjJVxd1HOgOa2N4=
 github.com/philippgille/gokv/encoding v0.7.0 h1:2oxepKzzTsi00iLZBCZ7Rmqrallh9zws3iqSrLGfkgo=
 github.com/philippgille/gokv/encoding v0.7.0/go.mod h1:yncOBBUciyniPI8t5ECF8XSCwhONE9Rjf3My5IHs3fA=
+github.com/philippgille/gokv/file v0.7.0 h1:gSsMhK03gZUwEOunuslb83bcKWT1NrwbF7WF2NSN9Mo=
+github.com/philippgille/gokv/file v0.7.0/go.mod h1:VpI2UojKLT7zI4PmH2YCEyuLtH/8uK+qoqWfkkoSi7E=
 github.com/philippgille/gokv/gomap v0.7.0 h1:RR+cgJl1aMxw8CkxGczRwCbC42tHJ7cRwaaD4Ycgg9k=
 github.com/philippgille/gokv/gomap v0.7.0/go.mod h1:HJ+PC2y/knRG2RrdH81N+BkjDhmbPQMUj+tRHgarvSg=
 github.com/philippgille/gokv/test v0.7.0 h1:0wBKnKaFZlSeHxLXcmUJqK//IQGUMeu+o8B876KCiOM=
