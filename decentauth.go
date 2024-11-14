@@ -35,8 +35,9 @@ type Claims struct {
 }
 
 type Handler struct {
-	mux   *http.ServeMux
-	store gokv.Store
+	mux    *http.ServeMux
+	store  gokv.Store
+	prefix string
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -160,12 +161,30 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 			Path:     "/",
 		})
 
-		http.Redirect(w, r, "/", 303)
+		returnTarget := "/"
+
+		returnTargetCookie, err := r.Cookie("return_target")
+		if err == nil {
+			returnTarget = returnTargetCookie.Value
+
+			http.SetCookie(w, &http.Cookie{
+				Name:     "return_target",
+				Value:    "",
+				HttpOnly: true,
+				Secure:   true,
+				MaxAge:   -1,
+				SameSite: http.SameSiteLaxMode,
+				Path:     "/",
+			})
+		}
+
+		http.Redirect(w, r, returnTarget, 303)
 	})
 
 	h = &Handler{
-		mux:   mux,
-		store: store,
+		mux:    mux,
+		store:  store,
+		prefix: opt.Prefix,
 	}
 
 	return
@@ -191,6 +210,24 @@ func (h *Handler) GetSession(r *http.Request) (sess *Session, err error) {
 
 	sess = &s
 	return
+}
+
+var returnQuery string
+
+func (h *Handler) LoginRedirect(w http.ResponseWriter, r *http.Request) {
+	returnTarget := fmt.Sprintf("%s?%s", r.URL.Path, r.URL.RawQuery)
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     "return_target",
+		Value:    returnTarget,
+		HttpOnly: true,
+		Secure:   true,
+		MaxAge:   3600,
+		SameSite: http.SameSiteLaxMode,
+		Path:     "/",
+	})
+
+	http.Redirect(w, r, h.prefix, 303)
 }
 
 func printJson(data interface{}) {
