@@ -91,7 +91,7 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 	mux.HandleFunc("/lastlogin", func(w http.ResponseWriter, r *http.Request) {
 
 		ar := &oauth.AuthRequest{
-			RedirectUri: fmt.Sprintf("http://localhost:3000%s/callback", opt.Prefix),
+			RedirectUri: fmt.Sprintf("https://%s%s/callback", r.Host, opt.Prefix),
 			Scopes:      []string{"openid profile"},
 		}
 
