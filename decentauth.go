@@ -95,6 +95,27 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 		}
 	})
 
+	mux.HandleFunc("/logout", func(w http.ResponseWriter, r *http.Request) {
+		sessionCookieName := fmt.Sprintf("%ssession_key", h.storagePrefix)
+
+		referrer := r.Header.Get("Referer")
+		http.SetCookie(w, &http.Cookie{
+			Name:     sessionCookieName,
+			Value:    "",
+			HttpOnly: true,
+			Secure:   true,
+			MaxAge:   -1,
+			SameSite: http.SameSiteLaxMode,
+			Path:     "/",
+		})
+
+		if referrer != "" {
+			http.Redirect(w, r, referrer, 303)
+		} else {
+			http.Redirect(w, r, "/", 303)
+		}
+	})
+
 	mux.HandleFunc("/lastlogin", func(w http.ResponseWriter, r *http.Request) {
 
 		ar := &oauth.AuthRequest{
@@ -267,28 +288,6 @@ func (h *Handler) LoginRedirect(w http.ResponseWriter, r *http.Request) {
 	})
 
 	http.Redirect(w, r, h.PathPrefix, 303)
-}
-
-func (h *Handler) LogoutRedirect(w http.ResponseWriter, r *http.Request) {
-
-	sessionCookieName := fmt.Sprintf("%ssession_key", h.storagePrefix)
-
-	referrer := r.Header.Get("Referer")
-	http.SetCookie(w, &http.Cookie{
-		Name:     sessionCookieName,
-		Value:    "",
-		HttpOnly: true,
-		Secure:   true,
-		MaxAge:   -1,
-		SameSite: http.SameSiteLaxMode,
-		Path:     "/",
-	})
-
-	if referrer != "" {
-		http.Redirect(w, r, referrer, 303)
-	} else {
-		http.Redirect(w, r, "/", 303)
-	}
 }
 
 func printJson(data interface{}) {
