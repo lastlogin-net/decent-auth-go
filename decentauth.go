@@ -34,11 +34,14 @@ type Claims struct {
 	Sub string `json:"sub"`
 }
 
+type loginCallback func(id string, w http.ResponseWriter, r *http.Request) (done bool, err error)
+
 type Handler struct {
+	PathPrefix    string
 	mux           *http.ServeMux
 	store         gokv.Store
-	pathPrefix    string
 	storagePrefix string
+	loginCallback loginCallback
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -185,17 +188,33 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 			})
 		}
 
+		if h.loginCallback != nil {
+			done, err := h.loginCallback(claims.Sub, w, r)
+			if err != nil {
+				http.Error(w, err.Error(), 500)
+				return
+			}
+
+			if done {
+				return
+			}
+		}
+
 		http.Redirect(w, r, returnTarget, 303)
 	})
 
 	h = &Handler{
+		PathPrefix:    opt.Prefix,
 		mux:           mux,
 		store:         store,
-		pathPrefix:    opt.Prefix,
 		storagePrefix: storagePrefix,
 	}
 
 	return
+}
+
+func (h *Handler) LoginCallback(callback loginCallback) {
+	h.loginCallback = callback
 }
 
 func (h *Handler) GetSessionOrLogin(w http.ResponseWriter, r *http.Request) (sess *Session, done bool) {
@@ -247,7 +266,29 @@ func (h *Handler) LoginRedirect(w http.ResponseWriter, r *http.Request) {
 		Path:     "/",
 	})
 
-	http.Redirect(w, r, h.pathPrefix, 303)
+	http.Redirect(w, r, h.PathPrefix, 303)
+}
+
+func (h *Handler) LogoutRedirect(w http.ResponseWriter, r *http.Request) {
+
+	sessionCookieName := fmt.Sprintf("%ssession_key", h.storagePrefix)
+
+	referrer := r.Header.Get("Referer")
+	http.SetCookie(w, &http.Cookie{
+		Name:     sessionCookieName,
+		Value:    "",
+		HttpOnly: true,
+		Secure:   true,
+		MaxAge:   -1,
+		SameSite: http.SameSiteLaxMode,
+		Path:     "/",
+	})
+
+	if referrer != "" {
+		http.Redirect(w, r, referrer, 303)
+	} else {
+		http.Redirect(w, r, "/", 303)
+	}
 }
 
 func printJson(data interface{}) {
