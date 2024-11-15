@@ -82,6 +82,11 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 
+		referrer := r.Header.Get("Referer")
+		if referrer != "" {
+			h.setReturnTargetCookie(referrer, w, r)
+		}
+
 		data := struct {
 			AuthPrefix string
 		}{
@@ -274,6 +279,11 @@ func (h *Handler) GetSession(r *http.Request) (sess *Session, err error) {
 
 func (h *Handler) LoginRedirect(w http.ResponseWriter, r *http.Request) {
 	returnTarget := fmt.Sprintf("%s?%s", r.URL.Path, r.URL.RawQuery)
+	h.setReturnTargetCookie(returnTarget, w, r)
+	http.Redirect(w, r, h.PathPrefix, 303)
+}
+
+func (h *Handler) setReturnTargetCookie(returnTarget string, w http.ResponseWriter, r *http.Request) {
 
 	cookieName := fmt.Sprintf("%sreturn_target", h.storagePrefix)
 
@@ -286,8 +296,6 @@ func (h *Handler) LoginRedirect(w http.ResponseWriter, r *http.Request) {
 		SameSite: http.SameSiteLaxMode,
 		Path:     "/",
 	})
-
-	http.Redirect(w, r, h.PathPrefix, 303)
 }
 
 func printJson(data interface{}) {
