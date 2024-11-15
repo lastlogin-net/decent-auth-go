@@ -35,9 +35,10 @@ type Claims struct {
 }
 
 type Handler struct {
-	mux    *http.ServeMux
-	store  gokv.Store
-	prefix string
+	mux           *http.ServeMux
+	store         gokv.Store
+	pathPrefix    string
+	storagePrefix string
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -50,6 +51,8 @@ type HandlerOptions struct {
 }
 
 func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
+
+	storagePrefix := "decent_auth_"
 
 	var store gokv.Store
 
@@ -145,14 +148,16 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 			return
 		}
 
-		err = store.Set(fmt.Sprintf("sessions/%s", sessionKey), session)
+		err = store.Set(fmt.Sprintf("%ssessions/%s", storagePrefix, sessionKey), session)
 		if err != nil {
 			http.Error(w, err.Error(), 500)
 			return
 		}
 
+		sessionCookieName := fmt.Sprintf("%ssession_key", storagePrefix)
+
 		http.SetCookie(w, &http.Cookie{
-			Name:     "session_key",
+			Name:     sessionCookieName,
 			Value:    sessionKey,
 			HttpOnly: true,
 			Secure:   true,
@@ -163,12 +168,14 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 
 		returnTarget := "/"
 
-		returnTargetCookie, err := r.Cookie("return_target")
+		returnCookieName := fmt.Sprintf("%sreturn_target", storagePrefix)
+
+		returnTargetCookie, err := r.Cookie(returnCookieName)
 		if err == nil {
 			returnTarget = returnTargetCookie.Value
 
 			http.SetCookie(w, &http.Cookie{
-				Name:     "return_target",
+				Name:     returnCookieName,
 				Value:    "",
 				HttpOnly: true,
 				Secure:   true,
@@ -182,22 +189,24 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 	})
 
 	h = &Handler{
-		mux:    mux,
-		store:  store,
-		prefix: opt.Prefix,
+		mux:           mux,
+		store:         store,
+		pathPrefix:    opt.Prefix,
+		storagePrefix: storagePrefix,
 	}
 
 	return
 }
 
 func (h *Handler) GetSession(r *http.Request) (sess *Session, err error) {
-	sessionCookie, err := r.Cookie("session_key")
+	sessionCookieName := fmt.Sprintf("%ssession_key", h.storagePrefix)
+	sessionCookie, err := r.Cookie(sessionCookieName)
 	if err != nil {
 		return
 	}
 
 	s := Session{}
-	key := fmt.Sprintf("sessions/%s", sessionCookie.Value)
+	key := fmt.Sprintf("%ssessions/%s", h.storagePrefix, sessionCookie.Value)
 	found, err := h.store.Get(key, &s)
 	if err != nil {
 		return
@@ -217,8 +226,10 @@ var returnQuery string
 func (h *Handler) LoginRedirect(w http.ResponseWriter, r *http.Request) {
 	returnTarget := fmt.Sprintf("%s?%s", r.URL.Path, r.URL.RawQuery)
 
+	cookieName := fmt.Sprintf("%sreturn_target", h.storagePrefix)
+
 	http.SetCookie(w, &http.Cookie{
-		Name:     "return_target",
+		Name:     cookieName,
 		Value:    returnTarget,
 		HttpOnly: true,
 		Secure:   true,
@@ -227,7 +238,7 @@ func (h *Handler) LoginRedirect(w http.ResponseWriter, r *http.Request) {
 		Path:     "/",
 	})
 
-	http.Redirect(w, r, h.prefix, 303)
+	http.Redirect(w, r, h.pathPrefix, 303)
 }
 
 func printJson(data interface{}) {
