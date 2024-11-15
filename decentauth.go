@@ -103,6 +103,11 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 	mux.HandleFunc("/logout", func(w http.ResponseWriter, r *http.Request) {
 		sessionCookieName := fmt.Sprintf("%ssession_key", h.storagePrefix)
 
+		sessionCookie, err := r.Cookie(sessionCookieName)
+		if err != nil {
+			return
+		}
+
 		referrer := r.Header.Get("Referer")
 		http.SetCookie(w, &http.Cookie{
 			Name:     sessionCookieName,
@@ -113,6 +118,12 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 			SameSite: http.SameSiteLaxMode,
 			Path:     "/",
 		})
+
+		err = store.Delete(fmt.Sprintf("%ssessions/%s", storagePrefix, sessionCookie.Value))
+		if err != nil {
+			http.Error(w, err.Error(), 500)
+			return
+		}
 
 		if referrer != "" {
 			http.Redirect(w, r, referrer, 303)
