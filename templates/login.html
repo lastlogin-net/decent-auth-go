@@ -5,25 +5,44 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
 
     <style>
+
+      *, *::before, *::after {
+        box-sizing: border-box;
+      }
+
+      :root {
+        --text-color: #222;
+        --background-color: #eee;
+        --border: 2px solid var(--text-color);
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --text-color: #eee;
+          --background-color: #222;
+        }
+      }
+
       body {
         font-family: Arial;
         font-size: 1.2em;
-        display: flex;
-        justify-content: center;
+        color: var(--text-color);
+        background: var(--background-color);
+        margin: 0 auto;
+        max-width: 640px;
+        height: 100vh;
+        padding: 15px;
+        border-left: var(--border);
+        border-right: var(--border);
       }
 
-      .content {
-        width: 640px;
-      }
     </style>
   </head>
   <body>
-    <main class='content'>
-      <h1>Hi there</h1>
+    <h1>Login</h1>
 
-      <form action='{{.AuthPrefix}}/lastlogin' method='POST'>
-        <button type='submit'>LastLogin</button>
-      </form>
-    </main>
+    <form action='{{.AuthPrefix}}/lastlogin' method='POST'>
+      <button type='submit'>LastLogin</button>
+    </form>
   </body>
 </html>
