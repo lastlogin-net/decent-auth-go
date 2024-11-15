@@ -40,11 +40,8 @@ func main() {
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 
-		redirUrl := fmt.Sprintf("%s?return_path=%s", authPrefix, "/")
-
-		session, err := authHandler.GetSession(r)
-		if err != nil {
-			http.Redirect(w, r, redirUrl, 303)
+		session, redirected := authHandler.GetSessionOrLogin(w, r)
+		if redirected {
 			return
 		}
 

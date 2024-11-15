@@ -198,6 +198,17 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 	return
 }
 
+func (h *Handler) GetSessionOrLogin(w http.ResponseWriter, r *http.Request) (sess *Session, done bool) {
+	sess, err := h.GetSession(r)
+	if err != nil {
+		h.LoginRedirect(w, r)
+		done = true
+		return
+	}
+
+	return
+}
+
 func (h *Handler) GetSession(r *http.Request) (sess *Session, err error) {
 	sessionCookieName := fmt.Sprintf("%ssession_key", h.storagePrefix)
 	sessionCookie, err := r.Cookie(sessionCookieName)
@@ -220,8 +231,6 @@ func (h *Handler) GetSession(r *http.Request) (sess *Session, err error) {
 	sess = &s
 	return
 }
-
-var returnQuery string
 
 func (h *Handler) LoginRedirect(w http.ResponseWriter, r *http.Request) {
 	returnTarget := fmt.Sprintf("%s?%s", r.URL.Path, r.URL.RawQuery)
