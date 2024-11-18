@@ -36,6 +36,11 @@ type Claims struct {
 	Sub string `json:"sub"`
 }
 
+type oidcFlowState struct {
+	OauthFlowState *oauth.AuthCodeFlowState `json:"oauth_flow_state"`
+	ReturnTarget   string                   `json:"return_target"`
+}
+
 type loginCallback func(id string, w http.ResponseWriter, r *http.Request) (done bool, err error)
 
 type Handler struct {
@@ -79,9 +84,6 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 	if err != nil {
 		return
 	}
-
-	// TODO: not thread safe
-	var flowState *oauth.AuthCodeFlowState
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 
@@ -160,7 +162,7 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 		}
 
 		authUri := fmt.Sprintf("https://%s/auth", "lastlogin.net")
-		flowState, err = oauth.StartAuthCodeFlow(authUri, ar)
+		fs, err := oauth.StartAuthCodeFlow(authUri, ar)
 		if err != nil {
 			http.Error(w, err.Error(), 500)
 			return
@@ -172,24 +174,46 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 			return
 		}
 
-		if returnTarget != "" {
-			key := fmt.Sprintf("%sreturn_targets/%s", storagePrefix, flowState.State)
-			err = store.Set(key, returnTarget)
-			if err != nil {
-				http.Error(w, err.Error(), 500)
-				return
-			}
+		flowState := oidcFlowState{
+			OauthFlowState: fs,
+			ReturnTarget:   returnTarget,
 		}
 
-		http.Redirect(w, r, flowState.AuthUri, 303)
+		key := fmt.Sprintf("%soidc_flow_state/%s", storagePrefix, fs.State)
+		err = store.Set(key, flowState)
+		if err != nil {
+			http.Error(w, err.Error(), 500)
+			return
+		}
+
+		http.Redirect(w, r, fs.AuthUri, 303)
 	})
 
 	mux.HandleFunc("/callback", func(w http.ResponseWriter, r *http.Request) {
 		code := r.URL.Query().Get("code")
 		state := r.URL.Query().Get("state")
 
+		key := fmt.Sprintf("%soidc_flow_state/%s", storagePrefix, state)
+		var flowState oidcFlowState
+		found, err := h.store.Get(key, &flowState)
+		if err != nil {
+			return
+		}
+
+		if !found {
+			err = errors.New("No such flow state")
+			return
+		}
+
+		err = store.Delete(fmt.Sprintf("%soidc_flow_state/%s", storagePrefix, state))
+		if err != nil {
+			http.Error(w, err.Error(), 500)
+			return
+		}
+
 		tokenUri := fmt.Sprintf("https://%s/token", "lastlogin.net")
-		resBytes, callbackErr := oauth.CompleteAuthCodeFlow(tokenUri, code, state, flowState)
+		fs := flowState.OauthFlowState
+		resBytes, callbackErr := oauth.CompleteAuthCodeFlow(tokenUri, code, state, fs)
 		if callbackErr != nil {
 			w.WriteHeader(500)
 			io.WriteString(w, callbackErr.Error())
@@ -206,7 +230,7 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 		}
 
 		var claims Claims
-		err := oauth.UnsafeParseJwt(tokenRes.IdToken, &claims)
+		err = oauth.UnsafeParseJwt(tokenRes.IdToken, &claims)
 		if err != nil {
 			http.Error(w, err.Error(), 500)
 			return
@@ -241,25 +265,7 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 			Path:     "/",
 		})
 
-		key := fmt.Sprintf("%sreturn_targets/%s", storagePrefix, state)
-		var returnTarget string
-		found, err := h.store.Get(key, &returnTarget)
-		if err != nil {
-			return
-		}
-
-		if !found {
-			err = errors.New("No such return target")
-			return
-		}
-
-		err = store.Delete(fmt.Sprintf("%sreturn_targets/%s", storagePrefix, state))
-		if err != nil {
-			http.Error(w, err.Error(), 500)
-			return
-		}
-
-		http.Redirect(w, r, returnTarget, 303)
+		http.Redirect(w, r, flowState.ReturnTarget, 303)
 	})
 
 	h = &Handler{
