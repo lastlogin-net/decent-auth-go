@@ -10,6 +10,8 @@ import (
 	"io"
 	"math/big"
 	"net/http"
+	"net/url"
+	"strings"
 
 	oauth "github.com/anderspitman/little-oauth2-go"
 	"github.com/philippgille/gokv"
@@ -78,19 +80,25 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 		return
 	}
 
+	// TODO: not thread safe
 	var flowState *oauth.AuthCodeFlowState
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 
-		referrer := r.Header.Get("Referer")
-		if referrer != "" {
-			h.setReturnTargetCookie(referrer, w, r)
+		r.ParseForm()
+
+		returnTarget, err := getReturnTarget(r)
+		if err != nil {
+			http.Error(w, err.Error(), 400)
+			return
 		}
 
 		data := struct {
-			AuthPrefix string
+			AuthPrefix   string
+			ReturnTarget string
 		}{
-			AuthPrefix: opt.Prefix,
+			AuthPrefix:   opt.Prefix,
+			ReturnTarget: returnTarget,
 		}
 
 		err = tmpl.ExecuteTemplate(w, "login.html", data)
@@ -101,6 +109,9 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 	})
 
 	mux.HandleFunc("/logout", func(w http.ResponseWriter, r *http.Request) {
+
+		r.ParseForm()
+
 		sessionCookieName := fmt.Sprintf("%ssession_key", h.storagePrefix)
 
 		sessionCookie, err := r.Cookie(sessionCookieName)
@@ -108,7 +119,6 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 			return
 		}
 
-		referrer := r.Header.Get("Referer")
 		http.SetCookie(w, &http.Cookie{
 			Name:     sessionCookieName,
 			Value:    "",
@@ -125,8 +135,14 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 			return
 		}
 
-		if referrer != "" {
-			http.Redirect(w, r, referrer, 303)
+		returnTarget, err := getReturnTarget(r)
+		if err != nil {
+			http.Error(w, err.Error(), 400)
+			return
+		}
+
+		if returnTarget != "" {
+			http.Redirect(w, r, returnTarget, 303)
 		} else {
 			http.Redirect(w, r, "/", 303)
 		}
@@ -134,8 +150,12 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 
 	mux.HandleFunc("/lastlogin", func(w http.ResponseWriter, r *http.Request) {
 
+		r.ParseForm()
+
+		redirectUri := fmt.Sprintf("https://%s%s/callback", r.Host, opt.Prefix)
+
 		ar := &oauth.AuthRequest{
-			RedirectUri: fmt.Sprintf("https://%s%s/callback", r.Host, opt.Prefix),
+			RedirectUri: redirectUri,
 			Scopes:      []string{"openid profile"},
 		}
 
@@ -144,6 +164,21 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 		if err != nil {
 			http.Error(w, err.Error(), 500)
 			return
+		}
+
+		returnTarget, err := getReturnTarget(r)
+		if err != nil {
+			http.Error(w, err.Error(), 400)
+			return
+		}
+
+		if returnTarget != "" {
+			key := fmt.Sprintf("%sreturn_targets/%s", storagePrefix, flowState.State)
+			err = store.Set(key, returnTarget)
+			if err != nil {
+				http.Error(w, err.Error(), 500)
+				return
+			}
 		}
 
 		http.Redirect(w, r, flowState.AuthUri, 303)
@@ -206,35 +241,22 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 			Path:     "/",
 		})
 
-		returnTarget := "/"
-
-		returnCookieName := fmt.Sprintf("%sreturn_target", storagePrefix)
-
-		returnTargetCookie, err := r.Cookie(returnCookieName)
-		if err == nil {
-			returnTarget = returnTargetCookie.Value
-
-			http.SetCookie(w, &http.Cookie{
-				Name:     returnCookieName,
-				Value:    "",
-				HttpOnly: true,
-				Secure:   true,
-				MaxAge:   -1,
-				SameSite: http.SameSiteLaxMode,
-				Path:     "/",
-			})
+		key := fmt.Sprintf("%sreturn_targets/%s", storagePrefix, state)
+		var returnTarget string
+		found, err := h.store.Get(key, &returnTarget)
+		if err != nil {
+			return
 		}
 
-		if h.loginCallback != nil {
-			done, err := h.loginCallback(claims.Sub, w, r)
-			if err != nil {
-				http.Error(w, err.Error(), 500)
-				return
-			}
+		if !found {
+			err = errors.New("No such return target")
+			return
+		}
 
-			if done {
-				return
-			}
+		err = store.Delete(fmt.Sprintf("%sreturn_targets/%s", storagePrefix, state))
+		if err != nil {
+			http.Error(w, err.Error(), 500)
+			return
 		}
 
 		http.Redirect(w, r, returnTarget, 303)
@@ -289,24 +311,8 @@ func (h *Handler) GetSession(r *http.Request) (sess *Session, err error) {
 }
 
 func (h *Handler) LoginRedirect(w http.ResponseWriter, r *http.Request) {
-	returnTarget := fmt.Sprintf("%s?%s", r.URL.Path, r.URL.RawQuery)
-	h.setReturnTargetCookie(returnTarget, w, r)
-	http.Redirect(w, r, h.PathPrefix, 303)
-}
-
-func (h *Handler) setReturnTargetCookie(returnTarget string, w http.ResponseWriter, r *http.Request) {
-
-	cookieName := fmt.Sprintf("%sreturn_target", h.storagePrefix)
-
-	http.SetCookie(w, &http.Cookie{
-		Name:     cookieName,
-		Value:    returnTarget,
-		HttpOnly: true,
-		Secure:   true,
-		MaxAge:   3600,
-		SameSite: http.SameSiteLaxMode,
-		Path:     "/",
-	})
+	returnTarget := url.QueryEscape(fmt.Sprintf("%s?%s", r.URL.Path, r.URL.RawQuery))
+	http.Redirect(w, r, h.PathPrefix+"?return_target="+returnTarget, 303)
 }
 
 func printJson(data interface{}) {
@@ -326,4 +332,19 @@ func genRandomText(length int) (string, error) {
 		id += string(chars[randIndex.Int64()])
 	}
 	return id, nil
+}
+
+func getReturnTarget(r *http.Request) (string, error) {
+	r.ParseForm()
+	rt := r.Form.Get("return_target")
+
+	if rt == "" {
+		return rt, nil
+	}
+
+	if !strings.HasPrefix(rt, "/") {
+		return "", errors.New("return_target must start with /")
+	}
+
+	return rt, nil
 }
