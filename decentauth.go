@@ -1,12 +1,13 @@
 package decentauth
 
 import (
+	"context"
 	"crypto/rand"
 	"embed"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"html/template"
+	//"html/template"
 	"io"
 	"math/big"
 	"net/http"
@@ -17,7 +18,20 @@ import (
 	"github.com/philippgille/gokv"
 	"github.com/philippgille/gokv/gomap"
 	//"github.com/philippgille/gokv/file"
+	"github.com/extism/go-sdk"
 )
+
+type HttpRequest struct {
+	Url     string      `json:"url"`
+	Headers http.Header `json:"headers"`
+	Method  string      `json:"method"`
+}
+
+type HttpResponse struct {
+	Code    int         `json:"code"`
+	Headers http.Header `json:"headers"`
+	Body    string      `json:"body"`
+}
 
 //go:embed templates
 var fs embed.FS
@@ -78,37 +92,103 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 		store = opt.KvStore
 	}
 
-	mux := http.NewServeMux()
+	extism.SetLogLevel(extism.LogLevelDebug)
 
-	tmpl, err := template.ParseFS(fs, "templates/*")
+	manifest := extism.Manifest{
+		Wasm: []extism.Wasm{
+			extism.WasmUrl{
+				//Url: "http://localhost:8000/target/wasm32-unknown-unknown/debug/decent_auth_rs.wasm",
+				Url: "http://localhost:8000/target/wasm32-wasip1/debug/decent_auth_rs.wasm",
+			},
+		},
+		AllowedHosts: []string{"*"},
+	}
+
+	ctx := context.Background()
+	config := extism.PluginConfig{
+		EnableWasi: true,
+	}
+	plugin, err := extism.NewPlugin(ctx, manifest, config, []extism.HostFunction{})
 	if err != nil {
 		return
 	}
 
+	mux := http.NewServeMux()
+
+	//tmpl, err := template.ParseFS(fs, "templates/*")
+	//if err != nil {
+	//	return
+	//}
+
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 
-		r.ParseForm()
+		// TODO: should we be passing in the auth prefix as well?
+		uri := fmt.Sprintf("http://%s%s", r.Host, r.URL.RequestURI())
 
-		returnTarget, err := getReturnTarget(r)
-		if err != nil {
-			http.Error(w, err.Error(), 400)
-			return
+		req := HttpRequest{
+			Url:     uri,
+			Headers: r.Header,
+			Method:  "GET",
 		}
 
-		data := struct {
-			AuthPrefix   string
-			ReturnTarget string
-		}{
-			AuthPrefix:   opt.Prefix,
-			ReturnTarget: returnTarget,
-		}
-
-		err = tmpl.ExecuteTemplate(w, "login.html", data)
+		jsonBytes, err := json.Marshal(req)
 		if err != nil {
 			http.Error(w, err.Error(), 500)
 			return
 		}
+
+		fmt.Println(string(jsonBytes))
+
+		_, resJson, err := plugin.Call("handle", jsonBytes)
+		if err != nil {
+			http.Error(w, err.Error(), 500)
+			return
+		}
+
+		var res HttpResponse
+
+		err = json.Unmarshal(resJson, &res)
+		if err != nil {
+			http.Error(w, err.Error(), 500)
+			return
+		}
+
+		printJson(res)
+
+		for key, values := range res.Headers {
+			for _, value := range values {
+				w.Header().Add(key, value)
+			}
+		}
+
+		w.WriteHeader(res.Code)
+		w.Write([]byte(res.Body))
 	})
+
+	//mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+
+	//	r.ParseForm()
+
+	//	returnTarget, err := getReturnTarget(r)
+	//	if err != nil {
+	//		http.Error(w, err.Error(), 400)
+	//		return
+	//	}
+
+	//	data := struct {
+	//		AuthPrefix   string
+	//		ReturnTarget string
+	//	}{
+	//		AuthPrefix:   opt.Prefix,
+	//		ReturnTarget: returnTarget,
+	//	}
+
+	//	err = tmpl.ExecuteTemplate(w, "login.html", data)
+	//	if err != nil {
+	//		http.Error(w, err.Error(), 500)
+	//		return
+	//	}
+	//})
 
 	mux.HandleFunc("/logout", func(w http.ResponseWriter, r *http.Request) {
 

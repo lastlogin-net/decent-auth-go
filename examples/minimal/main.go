@@ -44,10 +44,12 @@ func main() {
 		io.WriteString(w, buildHtml(session))
 	})
 
-	http.Handle(authPrefix+"/", http.StripPrefix(authPrefix, authHandler))
+	//http.Handle(authPrefix+"/", http.StripPrefix(authPrefix, authHandler))
+	http.Handle(authPrefix+"/", authHandler)
 
 	fmt.Println("Running")
-	http.ListenAndServe(":3000", nil)
+	err = http.ListenAndServe(":3000", nil)
+	exitOnError(err)
 }
 
 func exitOnError(err error) {
