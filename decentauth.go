@@ -18,9 +18,9 @@ import (
 
 	oauth "github.com/anderspitman/little-oauth2-go"
 	"github.com/philippgille/gokv"
-	"github.com/philippgille/gokv/gomap"
-	//"github.com/philippgille/gokv/file"
+	//"github.com/philippgille/gokv/gomap"
 	"github.com/extism/go-sdk"
+	"github.com/philippgille/gokv/file"
 )
 
 //go:embed decent_auth_rs.wasm templates
@@ -83,16 +83,61 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 	var store gokv.Store
 
 	if opt == nil || opt.KvStore == nil {
-		store = gomap.NewStore(gomap.Options{})
-		//store, err = file.NewStore(file.Options{
-		//	Directory: "./db",
-		//})
-		//if err != nil {
-		//	return
-		//}
+		//store = gomap.NewStore(gomap.Options{})
+		store, err = file.NewStore(file.Options{
+			Directory: "./db",
+		})
+		if err != nil {
+			return
+		}
 	} else {
 		store = opt.KvStore
 	}
+
+	kvRead := extism.NewHostFunctionWithStack(
+		"kv_read",
+		func(ctx context.Context, p *extism.CurrentPlugin, stack []uint64) {
+			key, err := p.ReadString(stack[0])
+			if err != nil {
+				panic(err)
+			}
+
+			var value []byte
+			found, err := store.Get(key, &value)
+			if err != nil {
+				panic(err)
+			}
+			if !found {
+				value = []byte{0, 0, 0, 0}
+			}
+
+			stack[0], err = p.WriteBytes(value)
+		},
+		[]extism.ValueType{extism.ValueTypePTR},
+		[]extism.ValueType{extism.ValueTypePTR},
+	)
+
+	kvWrite := extism.NewHostFunctionWithStack(
+		"kv_write",
+		func(ctx context.Context, p *extism.CurrentPlugin, stack []uint64) {
+			key, err := p.ReadString(stack[0])
+			if err != nil {
+				panic(err)
+			}
+
+			value, err := p.ReadBytes(stack[1])
+			if err != nil {
+				panic(err)
+			}
+
+			err = store.Set(key, value)
+			if err != nil {
+				panic(err)
+			}
+		},
+		[]extism.ValueType{extism.ValueTypePTR, extism.ValueTypePTR},
+		[]extism.ValueType{},
+	)
 
 	extism.SetLogLevel(extism.LogLevelDebug)
 
@@ -132,7 +177,11 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 		EnableWasi:                true,
 		EnableHttpResponseHeaders: true,
 	}
-	plugin, err := extism.NewPlugin(ctx, manifest, config, []extism.HostFunction{})
+	hostFunctions := []extism.HostFunction{
+		kvRead,
+		kvWrite,
+	}
+	plugin, err := extism.NewPlugin(ctx, manifest, config, hostFunctions)
 	if err != nil {
 		return
 	}
