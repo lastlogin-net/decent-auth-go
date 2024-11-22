@@ -139,7 +139,6 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 			var data any
 			err = json.Unmarshal(value, &data)
 			if err != nil {
-				fmt.Println("here1")
 				panic(err)
 			}
 
@@ -224,8 +223,6 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 			http.Error(w, err.Error(), 500)
 			return
 		}
-
-		fmt.Println(string(jsonBytes))
 
 		mut.Lock()
 		_, resJson, err := plugin.Call("handle", jsonBytes)
