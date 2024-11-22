@@ -98,26 +98,46 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 	kvRead := extism.NewHostFunctionWithStack(
 		"kv_read",
 		func(ctx context.Context, p *extism.CurrentPlugin, stack []uint64) {
+
+			returnError := func(code uint8) {
+				fmt.Println("error code", code)
+				stack[0], err = p.WriteBytes([]byte{code})
+				if err != nil {
+					panic(err)
+				}
+			}
+
 			key, err := p.ReadString(stack[0])
 			if err != nil {
-				panic(err)
+				returnError(1)
+				return
 			}
 
 			var value any
 			found, err := store.Get(key, &value)
 			if err != nil {
-				panic(err)
+				returnError(2)
+				return
 			}
 			if !found {
-				value = []byte{0, 0, 0, 0}
+				returnError(3)
+				return
 			}
 
 			// TODO: see if we can avoid duplicate JSON encoding. It would probably require
 			// having a method on the KV for storing pre-encoded data, like SetEncoded() or
 			// something
 			bytes, err := json.Marshal(value)
+			if err != nil {
+				returnError(4)
+				return
+			}
 
+			bytes = append([]byte{65}, bytes...)
 			stack[0], err = p.WriteBytes(bytes)
+			if err != nil {
+				panic(err)
+			}
 		},
 		[]extism.ValueType{extism.ValueTypePTR},
 		[]extism.ValueType{extism.ValueTypePTR},
