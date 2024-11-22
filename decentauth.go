@@ -103,7 +103,7 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 				panic(err)
 			}
 
-			var value []byte
+			var value any
 			found, err := store.Get(key, &value)
 			if err != nil {
 				panic(err)
@@ -112,7 +112,12 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 				value = []byte{0, 0, 0, 0}
 			}
 
-			stack[0], err = p.WriteBytes(value)
+			// TODO: see if we can avoid duplicate JSON encoding. It would probably require
+			// having a method on the KV for storing pre-encoded data, like SetEncoded() or
+			// something
+			bytes, err := json.Marshal(value)
+
+			stack[0], err = p.WriteBytes(bytes)
 		},
 		[]extism.ValueType{extism.ValueTypePTR},
 		[]extism.ValueType{extism.ValueTypePTR},
@@ -131,7 +136,14 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 				panic(err)
 			}
 
-			err = store.Set(key, value)
+			var data any
+			err = json.Unmarshal(value, &data)
+			if err != nil {
+				fmt.Println("here1")
+				panic(err)
+			}
+
+			err = store.Set(key, data)
 			if err != nil {
 				panic(err)
 			}
