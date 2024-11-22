@@ -7,8 +7,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"path/filepath"
-	"runtime"
+	//"path/filepath"
+	//"runtime"
 	//"html/template"
 	"io"
 	"math/big"
@@ -23,6 +23,9 @@ import (
 	"github.com/extism/go-sdk"
 )
 
+//go:embed decent_auth_rs.wasm templates
+var fs embed.FS
+
 type HttpRequest struct {
 	Url     string      `json:"url"`
 	Headers http.Header `json:"headers"`
@@ -34,9 +37,6 @@ type HttpResponse struct {
 	Headers http.Header `json:"headers"`
 	Body    string      `json:"body"`
 }
-
-//go:embed templates
-var fs embed.FS
 
 type Session struct {
 	IdType string `json:"id_type"`
@@ -96,19 +96,32 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 
 	extism.SetLogLevel(extism.LogLevelDebug)
 
-	_, curFilePath, _, ok := runtime.Caller(0)
-	if !ok {
-		err = errors.New("runtime.Caller failed")
+	wasmFile, err := fs.Open("decent_auth_rs.wasm")
+	if err != nil {
 		return
 	}
 
-	dir := filepath.Dir(curFilePath)
-	wasmPath := filepath.Join(dir, "decent_auth_rs.wasm")
+	wasmBytes, err := io.ReadAll(wasmFile)
+	if err != nil {
+		return
+	}
+
+	//_, curFilePath, _, ok := runtime.Caller(0)
+	//if !ok {
+	//	err = errors.New("runtime.Caller failed")
+	//	return
+	//}
+
+	//dir := filepath.Dir(curFilePath)
+	//wasmPath := filepath.Join(dir, "decent_auth_rs.wasm")
 
 	manifest := extism.Manifest{
 		Wasm: []extism.Wasm{
-			extism.WasmFile{
-				Path: wasmPath,
+			//extism.WasmFile{
+			//	Path: wasmPath,
+			//},
+			extism.WasmData{
+				Data: wasmBytes,
 			},
 		},
 		AllowedHosts: []string{"*"},
