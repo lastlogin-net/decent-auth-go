@@ -106,7 +106,8 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 
 	ctx := context.Background()
 	config := extism.PluginConfig{
-		EnableWasi: true,
+		EnableWasi:                true,
+		EnableHttpResponseHeaders: true,
 	}
 	plugin, err := extism.NewPlugin(ctx, manifest, config, []extism.HostFunction{})
 	if err != nil {
