@@ -79,7 +79,7 @@ type HandlerOptions struct {
 
 func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 
-	storagePrefix := "decent_auth_"
+	storagePrefix := "decent_auth"
 
 	var store gokv.Store
 
@@ -202,6 +202,9 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 			},
 		},
 		AllowedHosts: []string{"*"},
+		Config: map[string]string{
+			"storage_prefix": storagePrefix,
+		},
 	}
 
 	mut := &sync.Mutex{}
@@ -260,8 +263,6 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 			return
 		}
 
-		printJson(res)
-
 		for key, values := range res.Headers {
 			for _, value := range values {
 				w.Header().Add(key, value)
@@ -297,11 +298,11 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 	//	}
 	//})
 
-	mux.HandleFunc("/logout", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/auth/logout", func(w http.ResponseWriter, r *http.Request) {
 
 		r.ParseForm()
 
-		sessionCookieName := fmt.Sprintf("%ssession_key", h.storagePrefix)
+		sessionCookieName := fmt.Sprintf("%s_session_key", h.storagePrefix)
 
 		sessionCookie, err := r.Cookie(sessionCookieName)
 		if err != nil {
@@ -318,7 +319,7 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 			Path:     "/",
 		})
 
-		err = store.Delete(fmt.Sprintf("%ssessions/%s", storagePrefix, sessionCookie.Value))
+		err = store.Delete(fmt.Sprintf("/%s/sessions/%s", storagePrefix, sessionCookie.Value))
 		if err != nil {
 			http.Error(w, err.Error(), 500)
 			return
@@ -366,7 +367,7 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 			ReturnTarget:   returnTarget,
 		}
 
-		key := fmt.Sprintf("%soidc_flow_state/%s", storagePrefix, fs.State)
+		key := fmt.Sprintf("/%s/oidc_flow_state/%s", storagePrefix, fs.State)
 		err = store.Set(key, flowState)
 		if err != nil {
 			http.Error(w, err.Error(), 500)
@@ -380,7 +381,7 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 		code := r.URL.Query().Get("code")
 		state := r.URL.Query().Get("state")
 
-		key := fmt.Sprintf("%soidc_flow_state/%s", storagePrefix, state)
+		key := fmt.Sprintf("/%s/oidc_flow_state/%s", storagePrefix, state)
 		var flowState oidcFlowState
 		found, err := h.store.Get(key, &flowState)
 		if err != nil {
@@ -392,7 +393,7 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 			return
 		}
 
-		err = store.Delete(fmt.Sprintf("%soidc_flow_state/%s", storagePrefix, state))
+		err = store.Delete(fmt.Sprintf("/%s/oidc_flow_state/%s", storagePrefix, state))
 		if err != nil {
 			http.Error(w, err.Error(), 500)
 			return
@@ -434,13 +435,13 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 			return
 		}
 
-		err = store.Set(fmt.Sprintf("%ssessions/%s", storagePrefix, sessionKey), session)
+		err = store.Set(fmt.Sprintf("/%s/sessions/%s", storagePrefix, sessionKey), session)
 		if err != nil {
 			http.Error(w, err.Error(), 500)
 			return
 		}
 
-		sessionCookieName := fmt.Sprintf("%ssession_key", storagePrefix)
+		sessionCookieName := fmt.Sprintf("%s_session_key", storagePrefix)
 
 		http.SetCookie(w, &http.Cookie{
 			Name:     sessionCookieName,
@@ -481,14 +482,14 @@ func (h *Handler) GetSessionOrLogin(w http.ResponseWriter, r *http.Request) (ses
 }
 
 func (h *Handler) GetSession(r *http.Request) (sess *Session, err error) {
-	sessionCookieName := fmt.Sprintf("%ssession_key", h.storagePrefix)
+	sessionCookieName := fmt.Sprintf("%s_session_key", h.storagePrefix)
 	sessionCookie, err := r.Cookie(sessionCookieName)
 	if err != nil {
 		return
 	}
 
 	s := Session{}
-	key := fmt.Sprintf("%ssessions/%s", h.storagePrefix, sessionCookie.Value)
+	key := fmt.Sprintf("/%s/sessions/%s", h.storagePrefix, sessionCookie.Value)
 	found, err := h.store.Get(key, &s)
 	if err != nil {
 		return

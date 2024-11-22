@@ -17,6 +17,7 @@ func buildHtml(session *decentauth.Session) string {
   </head>
   <body>
     <h1>Logged in as %s</h1>
+    <a href='/auth/logout'>Logout</a>
   </body>
 </html>
 `, session.Id)
@@ -33,10 +34,9 @@ func main() {
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 
-		redirUrl := fmt.Sprintf("%s?return_path=%s", authPrefix, "/")
-
 		session, err := authHandler.GetSession(r)
 		if err != nil {
+			redirUrl := fmt.Sprintf("%s?return_path=%s", authPrefix, "/")
 			http.Redirect(w, r, redirUrl, 303)
 			return
 		}
