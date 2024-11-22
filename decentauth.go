@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sync"
 	//"path/filepath"
 	//"runtime"
 	//"html/template"
@@ -172,6 +173,8 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 		AllowedHosts: []string{"*"},
 	}
 
+	mut := &sync.Mutex{}
+
 	ctx := context.Background()
 	config := extism.PluginConfig{
 		EnableWasi:                true,
@@ -212,11 +215,13 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 
 		fmt.Println(string(jsonBytes))
 
+		mut.Lock()
 		_, resJson, err := plugin.Call("handle", jsonBytes)
 		if err != nil {
 			http.Error(w, err.Error(), 500)
 			return
 		}
+		mut.Unlock()
 
 		var res HttpResponse
 
