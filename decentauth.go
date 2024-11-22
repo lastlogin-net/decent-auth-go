@@ -7,6 +7,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"path/filepath"
+	"runtime"
 	//"html/template"
 	"io"
 	"math/big"
@@ -94,11 +96,19 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 
 	extism.SetLogLevel(extism.LogLevelDebug)
 
+	_, curFilePath, _, ok := runtime.Caller(0)
+	if !ok {
+		err = errors.New("runtime.Caller failed")
+		return
+	}
+
+	dir := filepath.Dir(curFilePath)
+	wasmPath := filepath.Join(dir, "decent_auth_rs.wasm")
+
 	manifest := extism.Manifest{
 		Wasm: []extism.Wasm{
-			extism.WasmUrl{
-				//Url: "http://localhost:8000/target/wasm32-unknown-unknown/debug/decent_auth_rs.wasm",
-				Url: "http://localhost:8000/target/wasm32-wasip1/debug/decent_auth_rs.wasm",
+			extism.WasmFile{
+				Path: wasmPath,
 			},
 		},
 		AllowedHosts: []string{"*"},
