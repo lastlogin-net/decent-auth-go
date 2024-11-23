@@ -25,6 +25,7 @@ type HttpRequest struct {
 	Url     string      `json:"url"`
 	Headers http.Header `json:"headers"`
 	Method  string      `json:"method"`
+	Body    string      `json:"body"`
 }
 
 type HttpResponse struct {
@@ -151,6 +152,23 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 		[]extism.ValueType{},
 	)
 
+	kvDelete := extism.NewHostFunctionWithStack(
+		"kv_delete",
+		func(ctx context.Context, p *extism.CurrentPlugin, stack []uint64) {
+			key, err := p.ReadString(stack[0])
+			if err != nil {
+				panic(err)
+			}
+
+			err = store.Delete(key)
+			if err != nil {
+				panic(err)
+			}
+		},
+		[]extism.ValueType{extism.ValueTypePTR},
+		[]extism.ValueType{},
+	)
+
 	extism.SetLogLevel(extism.LogLevelDebug)
 
 	wasmFile, err := fs.Open("decent_auth_rs.wasm")
@@ -197,6 +215,7 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 	hostFunctions := []extism.HostFunction{
 		kvRead,
 		kvWrite,
+		kvDelete,
 	}
 	plugin, err := extism.NewPlugin(ctx, manifest, config, hostFunctions)
 	if err != nil {
@@ -210,10 +229,18 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 		// TODO: should we be passing in the auth prefix as well?
 		uri := fmt.Sprintf("http://%s%s", r.Host, r.URL.RequestURI())
 
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, err.Error(), 500)
+			return
+		}
+		r.Body.Close()
+
 		req := HttpRequest{
 			Url:     uri,
 			Headers: r.Header,
-			Method:  "GET",
+			Method:  r.Method,
+			Body:    string(body),
 		}
 
 		jsonBytes, err := json.Marshal(req)
@@ -246,46 +273,6 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 
 		w.WriteHeader(res.Code)
 		w.Write([]byte(res.Body))
-	})
-
-	mux.HandleFunc("/auth/logout", func(w http.ResponseWriter, r *http.Request) {
-
-		r.ParseForm()
-
-		sessionCookieName := fmt.Sprintf("%s_session_key", h.storagePrefix)
-
-		sessionCookie, err := r.Cookie(sessionCookieName)
-		if err != nil {
-			return
-		}
-
-		http.SetCookie(w, &http.Cookie{
-			Name:     sessionCookieName,
-			Value:    "",
-			HttpOnly: true,
-			Secure:   true,
-			MaxAge:   -1,
-			SameSite: http.SameSiteLaxMode,
-			Path:     "/",
-		})
-
-		err = store.Delete(fmt.Sprintf("/%s/sessions/%s", storagePrefix, sessionCookie.Value))
-		if err != nil {
-			http.Error(w, err.Error(), 500)
-			return
-		}
-
-		returnTarget, err := getReturnTarget(r)
-		if err != nil {
-			http.Error(w, err.Error(), 400)
-			return
-		}
-
-		if returnTarget != "" {
-			http.Redirect(w, r, returnTarget, 303)
-		} else {
-			http.Redirect(w, r, "/", 303)
-		}
 	})
 
 	h = &Handler{

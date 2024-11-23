@@ -9,7 +9,7 @@ import (
 	"github.com/lastlogin-net/decent-auth-go"
 )
 
-func buildHtml(session *decentauth.Session) string {
+func buildHtml(id, returnTarget string) string {
 	return fmt.Sprintf(`
 <!doctype html>
 <html>
@@ -17,10 +17,12 @@ func buildHtml(session *decentauth.Session) string {
   </head>
   <body>
     <h1>Logged in as %s</h1>
+    <a href='/protected'>Protected Page</a>
+    <a href='/auth?return_target=%s'>Login</a>
     <a href='/auth/logout'>Logout</a>
   </body>
 </html>
-`, session.Id)
+`, id, returnTarget)
 }
 
 func main() {
@@ -32,16 +34,22 @@ func main() {
 	})
 	exitOnError(err)
 
+	id := ""
+
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		io.WriteString(w, buildHtml(id, r.URL.Path))
+	})
+
+	http.HandleFunc("/protected", func(w http.ResponseWriter, r *http.Request) {
 
 		session, err := authHandler.GetSession(r)
 		if err != nil {
-			redirUrl := fmt.Sprintf("%s?return_path=%s", authPrefix, "/")
+			redirUrl := fmt.Sprintf("%s?return_target=%s", authPrefix, r.URL.Path)
 			http.Redirect(w, r, redirUrl, 303)
 			return
 		}
 
-		io.WriteString(w, buildHtml(session))
+		io.WriteString(w, buildHtml(session.Id, r.URL.Path))
 	})
 
 	//http.Handle(authPrefix+"/", http.StripPrefix(authPrefix, authHandler))
