@@ -170,6 +170,7 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 	)
 
 	extism.SetLogLevel(extism.LogLevelDebug)
+	//extism.SetLogLevel(extism.LogLevelInfo)
 
 	wasmFile, err := fs.Open("decent_auth_rs.wasm")
 	if err != nil {
@@ -251,7 +252,7 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 		}
 
 		mut.Lock()
-		_, resJson, err := plugin.Call("handle", jsonBytes)
+		_, resJson, err := plugin.Call("extism_handle", jsonBytes)
 		if err != nil {
 			http.Error(w, err.Error(), 500)
 			return
