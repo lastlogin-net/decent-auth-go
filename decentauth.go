@@ -201,6 +201,7 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 		},
 		AllowedHosts: []string{"*"},
 		Config: map[string]string{
+			"path_prefix":    opt.Prefix,
 			"storage_prefix": storagePrefix,
 		},
 	}

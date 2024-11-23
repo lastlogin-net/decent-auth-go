@@ -54,6 +54,7 @@ func main() {
 
 	//http.Handle(authPrefix+"/", http.StripPrefix(authPrefix, authHandler))
 	http.Handle(authPrefix+"/", authHandler)
+	http.Handle(authPrefix, authHandler)
 
 	fmt.Println("Running")
 	err = http.ListenAndServe(":3000", nil)
