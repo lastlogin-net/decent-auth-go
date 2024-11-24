@@ -169,8 +169,8 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 		[]extism.ValueType{},
 	)
 
-	extism.SetLogLevel(extism.LogLevelDebug)
-	//extism.SetLogLevel(extism.LogLevelInfo)
+	//extism.SetLogLevel(extism.LogLevelDebug)
+	extism.SetLogLevel(extism.LogLevelInfo)
 
 	wasmFile, err := fs.Open("decent_auth_rs.wasm")
 	if err != nil {
