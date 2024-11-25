@@ -12,14 +12,13 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/philippgille/gokv"
-	//"github.com/philippgille/gokv/gomap"
 	"github.com/extism/go-sdk"
-	"github.com/philippgille/gokv/file"
 )
 
 //go:embed decent_auth_rs.wasm
 var fs embed.FS
+
+const ErrorCodeNoError = 0
 
 type HttpRequest struct {
 	Url     string      `json:"url"`
@@ -44,7 +43,7 @@ type loginCallback func(id string, w http.ResponseWriter, r *http.Request) (done
 type Handler struct {
 	PathPrefix    string
 	mux           *http.ServeMux
-	store         gokv.Store
+	store         KvStore
 	storagePrefix string
 	loginCallback loginCallback
 }
@@ -55,20 +54,18 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 type HandlerOptions struct {
 	Prefix  string
-	KvStore gokv.Store
+	KvStore KvStore
 }
 
 func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 
 	storagePrefix := "decent_auth"
 
-	var store gokv.Store
+	var store KvStore
 
 	if opt == nil || opt.KvStore == nil {
-		//store = gomap.NewStore(gomap.Options{})
-		store, err = file.NewStore(file.Options{
-			Directory: "./db",
-		})
+		//store = NewMemoryKvStore()
+		store, err = NewSqliteKvStore()
 		if err != nil {
 			return
 		}
@@ -94,28 +91,14 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 				return
 			}
 
-			var value any
-			found, err := store.Get(key, &value)
+			valueBytes, err := store.Get(key)
 			if err != nil {
 				returnError(2)
 				return
 			}
-			if !found {
-				returnError(3)
-				return
-			}
 
-			// TODO: see if we can avoid duplicate JSON encoding. It would probably require
-			// having a method on the KV for storing pre-encoded data, like SetEncoded() or
-			// something
-			bytes, err := json.Marshal(value)
-			if err != nil {
-				returnError(4)
-				return
-			}
-
-			bytes = append([]byte{65}, bytes...)
-			stack[0], err = p.WriteBytes(bytes)
+			valueBytes = append([]byte{ErrorCodeNoError}, valueBytes...)
+			stack[0], err = p.WriteBytes(valueBytes)
 			if err != nil {
 				panic(err)
 			}
@@ -132,18 +115,12 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 				panic(err)
 			}
 
-			value, err := p.ReadBytes(stack[1])
+			valueBytes, err := p.ReadBytes(stack[1])
 			if err != nil {
 				panic(err)
 			}
 
-			var data any
-			err = json.Unmarshal(value, &data)
-			if err != nil {
-				panic(err)
-			}
-
-			err = store.Set(key, data)
+			err = store.Set(key, valueBytes)
 			if err != nil {
 				panic(err)
 			}
@@ -311,13 +288,13 @@ func (h *Handler) GetSession(r *http.Request) (sess *Session, err error) {
 
 	s := Session{}
 	key := fmt.Sprintf("/%s/sessions/%s", h.storagePrefix, sessionCookie.Value)
-	found, err := h.store.Get(key, &s)
+	valueBytes, err := h.store.Get(key)
 	if err != nil {
 		return
 	}
 
-	if !found {
-		err = errors.New("No such session")
+	err = json.Unmarshal(valueBytes, &s)
+	if err != nil {
 		return
 	}
 

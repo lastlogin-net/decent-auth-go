@@ -6,7 +6,7 @@ replace github.com/anderspitman/little-oauth2-go => ../little-oauth2-go
 
 require (
 	github.com/extism/go-sdk v1.6.1
-	github.com/philippgille/gokv v0.7.0
+	github.com/mattn/go-sqlite3 v1.14.24
 	github.com/philippgille/gokv/file v0.7.0
 )
 
