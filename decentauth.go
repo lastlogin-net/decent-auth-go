@@ -14,7 +14,7 @@ import (
 	"github.com/extism/go-sdk"
 )
 
-//go:embed decent_auth_rs.wasm
+//go:embed decent_auth.wasm
 var fs embed.FS
 
 const ErrorCodeNoError = 0
@@ -148,7 +148,7 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 	extism.SetLogLevel(extism.LogLevelDebug)
 	//extism.SetLogLevel(extism.LogLevelInfo)
 
-	wasmFile, err := fs.Open("decent_auth_rs.wasm")
+	wasmFile, err := fs.Open("decent_auth.wasm")
 	if err != nil {
 		return
 	}
@@ -165,7 +165,7 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 	//}
 
 	//dir := filepath.Dir(curFilePath)
-	//wasmPath := filepath.Join(dir, "decent_auth_rs.wasm")
+	//wasmPath := filepath.Join(dir, "decent_auth.wasm")
 
 	manifest := extism.Manifest{
 		Wasm: []extism.Wasm{
