@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	"sync"
 
 	"github.com/extism/go-sdk"
 )
@@ -146,8 +145,8 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 		[]extism.ValueType{},
 	)
 
-	//extism.SetLogLevel(extism.LogLevelDebug)
-	extism.SetLogLevel(extism.LogLevelInfo)
+	extism.SetLogLevel(extism.LogLevelDebug)
+	//extism.SetLogLevel(extism.LogLevelInfo)
 
 	wasmFile, err := fs.Open("decent_auth_rs.wasm")
 	if err != nil {
@@ -184,8 +183,6 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 		},
 	}
 
-	mut := &sync.Mutex{}
-
 	ctx := context.Background()
 	config := extism.PluginConfig{
 		EnableWasi:                true,
@@ -196,7 +193,7 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 		kvWrite,
 		kvDelete,
 	}
-	plugin, err := extism.NewPlugin(ctx, manifest, config, hostFunctions)
+	compiledPlugin, err := extism.NewCompiledPlugin(ctx, manifest, config, hostFunctions)
 	if err != nil {
 		return
 	}
@@ -204,6 +201,13 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+
+		pluginInstanceConfig := extism.PluginInstanceConfig{}
+
+		plugin, err := compiledPlugin.Instance(ctx, pluginInstanceConfig)
+		if err != nil {
+			return
+		}
 
 		// TODO: should we be passing in the auth prefix as well?
 		uri := fmt.Sprintf("http://%s%s", r.Host, r.URL.RequestURI())
@@ -228,13 +232,11 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 			return
 		}
 
-		mut.Lock()
 		_, resJson, err := plugin.Call("extism_handle", jsonBytes)
 		if err != nil {
 			http.Error(w, err.Error(), 500)
 			return
 		}
-		mut.Unlock()
 
 		var res HttpResponse
 

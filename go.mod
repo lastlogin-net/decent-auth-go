@@ -5,7 +5,7 @@ go 1.23.1
 replace github.com/anderspitman/little-oauth2-go => ../little-oauth2-go
 
 require (
-	github.com/extism/go-sdk v1.6.1
+	github.com/extism/go-sdk v1.6.2-0.20241121002538-bef00f39873e
 	github.com/mattn/go-sqlite3 v1.14.24
 	github.com/philippgille/gokv/file v0.7.0
 )
@@ -17,7 +17,7 @@ require (
 	github.com/philippgille/gokv/encoding v0.7.0 // indirect
 	github.com/philippgille/gokv/util v0.7.0 // indirect
 	github.com/tetratelabs/wabin v0.0.0-20230304001439-f6f874872834 // indirect
-	github.com/tetratelabs/wazero v1.8.1-0.20240916092830-1353ca24fef0 // indirect
+	github.com/tetratelabs/wazero v1.8.1 // indirect
 	go.opentelemetry.io/proto/otlp v1.3.1 // indirect
 	google.golang.org/protobuf v1.34.2 // indirect
 )
