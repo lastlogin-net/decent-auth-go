@@ -201,6 +201,9 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 	}
 
 	moduleConfig := wazero.NewModuleConfig().
+		WithSysWalltime().
+		WithSysNanotime().
+		WithSysNanosleep().
 		WithRandSource(rand.Reader)
 
 	mux := http.NewServeMux()
