@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io"
 	"net/http"
@@ -27,10 +28,14 @@ func buildHtml(id, returnTarget string) string {
 
 func main() {
 
+	adminId := flag.String("admin-id", "", "Admin identifier")
+	flag.Parse()
+
 	authPrefix := "/auth"
 
 	authHandler, err := decentauth.NewHandler(&decentauth.HandlerOptions{
-		Prefix: authPrefix,
+		Prefix:  authPrefix,
+		AdminId: *adminId,
 	})
 	exitOnError(err)
 

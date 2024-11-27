@@ -56,6 +56,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 type HandlerOptions struct {
 	Prefix  string
 	KvStore KvStore
+	AdminId string
 }
 
 func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
@@ -182,6 +183,7 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 		Config: map[string]string{
 			"path_prefix":    opt.Prefix,
 			"storage_prefix": storagePrefix,
+			"admin_id":       opt.AdminId,
 		},
 	}
 
