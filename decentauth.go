@@ -2,6 +2,7 @@ package decentauth
 
 import (
 	"context"
+	"crypto/rand"
 	"embed"
 	"encoding/json"
 	"errors"
@@ -12,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/extism/go-sdk"
+	"github.com/tetratelabs/wazero"
 )
 
 //go:embed decent_auth.wasm
@@ -198,11 +200,16 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 		return
 	}
 
+	moduleConfig := wazero.NewModuleConfig().
+		WithRandSource(rand.Reader)
+
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 
-		pluginInstanceConfig := extism.PluginInstanceConfig{}
+		pluginInstanceConfig := extism.PluginInstanceConfig{
+			ModuleConfig: moduleConfig,
+		}
 
 		plugin, err := compiledPlugin.Instance(ctx, pluginInstanceConfig)
 		if err != nil {
