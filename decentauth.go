@@ -185,6 +185,7 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 			"path_prefix":    opt.Prefix,
 			"storage_prefix": storagePrefix,
 			"admin_id":       opt.AdminId,
+			"id_header_name": "Remote-Id",
 		},
 	}
 
