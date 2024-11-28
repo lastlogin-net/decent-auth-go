@@ -42,11 +42,12 @@ type Session struct {
 type loginCallback func(id string, w http.ResponseWriter, r *http.Request) (done bool, err error)
 
 type Handler struct {
-	PathPrefix    string
-	mux           *http.ServeMux
-	store         KvStore
-	storagePrefix string
-	loginCallback loginCallback
+	PathPrefix     string
+	mux            *http.ServeMux
+	store          KvStore
+	storagePrefix  string
+	loginCallback  loginCallback
+	compiledPlugin *extism.CompiledPlugin
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -221,24 +222,7 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 			return
 		}
 
-		// TODO: should we be passing in the auth prefix as well?
-		uri := fmt.Sprintf("http://%s%s", r.Host, r.URL.RequestURI())
-
-		body, err := io.ReadAll(r.Body)
-		if err != nil {
-			http.Error(w, err.Error(), 500)
-			return
-		}
-		r.Body.Close()
-
-		req := HttpRequest{
-			Url:     uri,
-			Headers: r.Header,
-			Method:  r.Method,
-			Body:    string(body),
-		}
-
-		jsonBytes, err := json.Marshal(req)
+		jsonBytes, err := encodePluginReq(r)
 		if err != nil {
 			http.Error(w, err.Error(), 500)
 			return
@@ -269,10 +253,11 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 	})
 
 	h = &Handler{
-		PathPrefix:    opt.Prefix,
-		mux:           mux,
-		store:         store,
-		storagePrefix: storagePrefix,
+		PathPrefix:     opt.Prefix,
+		mux:            mux,
+		store:          store,
+		storagePrefix:  storagePrefix,
+		compiledPlugin: compiledPlugin,
 	}
 
 	return
@@ -283,8 +268,8 @@ func (h *Handler) LoginCallback(callback loginCallback) {
 }
 
 func (h *Handler) GetSessionOrLogin(w http.ResponseWriter, r *http.Request) (sess *Session, done bool) {
-	sess, err := h.GetSession(r)
-	if err != nil {
+	sess = h.GetSession(r)
+	if sess == nil {
 		h.LoginRedirect(w, r)
 		done = true
 		return
@@ -293,32 +278,78 @@ func (h *Handler) GetSessionOrLogin(w http.ResponseWriter, r *http.Request) (ses
 	return
 }
 
-func (h *Handler) GetSession(r *http.Request) (sess *Session, err error) {
-	sessionCookieName := fmt.Sprintf("%s_session_key", h.storagePrefix)
-	sessionCookie, err := r.Cookie(sessionCookieName)
-	if err != nil {
-		return
-	}
+func (h *Handler) GetSession(r *http.Request) (sess *Session) {
 
-	s := Session{}
-	key := fmt.Sprintf("/%s/sessions/%s", h.storagePrefix, sessionCookie.Value)
-	valueBytes, err := h.store.Get(key)
-	if err != nil {
-		return
-	}
+	return h.getSession(r)
 
-	err = json.Unmarshal(valueBytes, &s)
-	if err != nil {
-		return
-	}
+	//sessionCookieName := fmt.Sprintf("%s_session_key", h.storagePrefix)
+	//sessionCookie, err := r.Cookie(sessionCookieName)
+	//if err != nil {
+	//	return
+	//}
 
-	sess = &s
-	return
+	//s := Session{}
+	//key := fmt.Sprintf("/%s/sessions/%s", h.storagePrefix, sessionCookie.Value)
+	//valueBytes, err := h.store.Get(key)
+	//if err != nil {
+	//	return
+	//}
+
+	//err = json.Unmarshal(valueBytes, &s)
+	//if err != nil {
+	//	return
+	//}
+
+	//sess = &s
+	//return
 }
 
 func (h *Handler) LoginRedirect(w http.ResponseWriter, r *http.Request) {
 	returnTarget := url.QueryEscape(fmt.Sprintf("%s?%s", r.URL.Path, r.URL.RawQuery))
 	http.Redirect(w, r, h.PathPrefix+"?return_target="+returnTarget, 303)
+}
+
+func (h *Handler) getSession(r *http.Request) (session *Session) {
+
+	moduleConfig := wazero.NewModuleConfig().
+		WithSysWalltime().
+		WithSysNanotime().
+		WithSysNanosleep().
+		WithRandSource(rand.Reader)
+
+	pluginInstanceConfig := extism.PluginInstanceConfig{
+		ModuleConfig: moduleConfig,
+	}
+
+	plugin, err := h.compiledPlugin.Instance(context.Background(), pluginInstanceConfig)
+	if err != nil {
+		return
+	}
+
+	jsonBytes, err := encodePluginReq(r)
+	if err != nil {
+		return
+	}
+
+	_, resJson, err := plugin.Call("extism_get_session", jsonBytes)
+	if err != nil {
+		return
+	}
+
+	var res Session
+
+	err = json.Unmarshal(resJson, &res)
+	if err != nil {
+		return
+	}
+
+	if res.Id == "" {
+		return nil
+	}
+
+	session = &res
+
+	return
 }
 
 func getReturnTarget(r *http.Request) (string, error) {
@@ -334,6 +365,37 @@ func getReturnTarget(r *http.Request) (string, error) {
 	}
 
 	return rt, nil
+}
+
+func encodePluginReq(r *http.Request) (jsonBytes []byte, err error) {
+	// TODO: should we be passing in the auth prefix as well?
+	uri := fmt.Sprintf("http://%s%s", r.Host, r.URL.RequestURI())
+
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		return
+	}
+	r.Body.Close()
+
+	headers := make(map[string][]string)
+
+	for key, value := range r.Header {
+		headers[strings.ToLower(key)] = value
+	}
+
+	req := &HttpRequest{
+		Url:     uri,
+		Headers: headers,
+		Method:  r.Method,
+		Body:    string(body),
+	}
+
+	jsonBytes, err = json.Marshal(req)
+	if err != nil {
+		return
+	}
+
+	return
 }
 
 func printJson(data interface{}) {

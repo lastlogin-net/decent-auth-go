@@ -47,8 +47,8 @@ func main() {
 
 	http.HandleFunc("/protected", func(w http.ResponseWriter, r *http.Request) {
 
-		session, err := authHandler.GetSession(r)
-		if err != nil {
+		session := authHandler.GetSession(r)
+		if session == nil {
 			redirUrl := fmt.Sprintf("%s?return_target=%s", authPrefix, r.URL.Path)
 			http.Redirect(w, r, redirUrl, 303)
 			return
