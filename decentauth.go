@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 
 	"github.com/extism/go-sdk"
@@ -185,7 +186,7 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 			"path_prefix":    opt.Prefix,
 			"storage_prefix": storagePrefix,
 			"admin_id":       opt.AdminId,
-			"id_header_name": "Remote-Id",
+			//"id_header_name": "Remote-Id",
 		},
 	}
 
@@ -208,7 +209,9 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 		WithSysWalltime().
 		WithSysNanotime().
 		WithSysNanosleep().
-		WithRandSource(rand.Reader)
+		WithRandSource(rand.Reader).
+		WithStderr(os.Stderr).
+		WithStdout(os.Stdout)
 
 	mux := http.NewServeMux()
 
