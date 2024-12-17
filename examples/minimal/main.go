@@ -34,8 +34,34 @@ func main() {
 	authPrefix := "/auth"
 
 	authHandler, err := decentauth.NewHandler(&decentauth.HandlerOptions{
-		Prefix:  authPrefix,
-		AdminId: *adminId,
+		Config: decentauth.Config{
+			PathPrefix: authPrefix,
+			AdminID:    *adminId,
+			LoginMethods: []decentauth.LoginMethod{
+				decentauth.LoginMethod{
+					Name: "Admin Code",
+					Type: decentauth.LoginMethodAdminCode,
+				},
+				decentauth.LoginMethod{
+					Name: "ATProto",
+					Type: decentauth.LoginMethodATProto,
+				},
+				decentauth.LoginMethod{
+					Name: "Fediverse",
+					Type: decentauth.LoginMethodFediverse,
+				},
+			},
+			OIDCProviders: []decentauth.OIDCProvider{
+				decentauth.OIDCProvider{
+					Name: "LastLogin",
+					URI:  "https://lastlogin.net",
+				},
+				decentauth.OIDCProvider{
+					Name: "Obligator",
+					URI:  "https://auth.tn7.org",
+				},
+			},
+		},
 	})
 	exitOnError(err)
 

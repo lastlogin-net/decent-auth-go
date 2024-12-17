@@ -56,9 +56,39 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 type HandlerOptions struct {
-	Prefix  string
 	KvStore KvStore
-	AdminId string
+	Config  Config
+}
+
+type Config struct {
+	PathPrefix    string         `json:"path_prefix"`
+	StoragePrefix string         `json:"storage_prefix"`
+	AdminID       string         `json:"admin_id"`
+	IDHeaderName  string         `json:"id_header_name"`
+	LoginMethods  []LoginMethod  `json:"login_methods"`
+	OIDCProviders []OIDCProvider `json:"oidc_providers"`
+}
+
+type LoginMethod struct {
+	Name string          `json:"name,omitempty" db"name"`
+	Type LoginMethodType `json:"type"`
+}
+
+type LoginMethodType string
+
+const (
+	LoginMethodAdminCode = "admin-code"
+	LoginMethodATProto   = "atproto"
+	LoginMethodFediverse = "fediverse"
+)
+
+type OIDCProvider struct {
+	URI              string `json:"uri" db "uri"`
+	Name             string `json:"name,omitempty" db"name"`
+	ClientID         string `json:"client_id,omitempty" db:"client_id"`
+	ClientSecret     string `json:"client_secret,omitempty" db:"client_secret"`
+	AuthorizationURI string `json:"authorization_uri,omitempty" db:"authorization_uri"`
+	TokenURI         string `json:"token_uri,omitempty" db:"token_uri"`
 }
 
 func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
@@ -172,6 +202,11 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 	//dir := filepath.Dir(curFilePath)
 	//wasmPath := filepath.Join(dir, "decent_auth.wasm")
 
+	configBytes, err := json.Marshal(opt.Config)
+	if err != nil {
+		return
+	}
+
 	manifest := extism.Manifest{
 		Wasm: []extism.Wasm{
 			//extism.WasmFile{
@@ -182,11 +217,11 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 			},
 		},
 		AllowedHosts: []string{"*"},
+		//AllowedPaths: map[string]string{
+		//	"./": "/",
+		//},
 		Config: map[string]string{
-			"path_prefix":    opt.Prefix,
-			"storage_prefix": storagePrefix,
-			"admin_id":       opt.AdminId,
-			//"id_header_name": "Remote-Id",
+			"config": string(configBytes),
 		},
 	}
 
@@ -257,7 +292,7 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 	})
 
 	h = &Handler{
-		PathPrefix:     opt.Prefix,
+		PathPrefix:     opt.Config.PathPrefix,
 		mux:            mux,
 		store:          store,
 		storagePrefix:  storagePrefix,
