@@ -61,8 +61,8 @@ type HandlerOptions struct {
 }
 
 type Config struct {
-	PathPrefix    string         `json:"path_prefix"`
-	StoragePrefix string         `json:"storage_prefix"`
+	PathPrefix    string         `json:"path_prefix,omitempty"`
+	StoragePrefix string         `json:"storage_prefix,omitempty"`
 	AdminID       string         `json:"admin_id"`
 	IDHeaderName  string         `json:"id_header_name"`
 	LoginMethods  []LoginMethod  `json:"login_methods"`
