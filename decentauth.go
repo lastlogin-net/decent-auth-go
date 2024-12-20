@@ -180,8 +180,8 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 		[]extism.ValueType{},
 	)
 
-	extism.SetLogLevel(extism.LogLevelDebug)
-	//extism.SetLogLevel(extism.LogLevelInfo)
+	//extism.SetLogLevel(extism.LogLevelDebug)
+	extism.SetLogLevel(extism.LogLevelInfo)
 
 	wasmFile, err := fs.Open("decent_auth.wasm")
 	if err != nil {
@@ -260,6 +260,7 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 		if err != nil {
 			return
 		}
+		defer plugin.Close(ctx)
 
 		jsonBytes, err := encodePluginReq(r)
 		if err != nil {
@@ -360,10 +361,13 @@ func (h *Handler) getSession(r *http.Request) (session *Session) {
 		ModuleConfig: moduleConfig,
 	}
 
-	plugin, err := h.compiledPlugin.Instance(context.Background(), pluginInstanceConfig)
+	ctx := context.Background()
+
+	plugin, err := h.compiledPlugin.Instance(ctx, pluginInstanceConfig)
 	if err != nil {
 		return
 	}
+	defer plugin.Close(ctx)
 
 	jsonBytes, err := encodePluginReq(r)
 	if err != nil {
