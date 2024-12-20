@@ -180,6 +180,51 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 		[]extism.ValueType{},
 	)
 
+        kvList := extism.NewHostFunctionWithStack(
+		"kv_list",
+		func(ctx context.Context, p *extism.CurrentPlugin, stack []uint64) {
+
+			returnError := func(code uint8) {
+				fmt.Println("error code", code)
+				stack[0], err = p.WriteBytes([]byte{code})
+				if err != nil {
+					panic(err)
+				}
+			}
+
+			prefix, err := p.ReadString(stack[0])
+			if err != nil {
+				returnError(1)
+				return
+			}
+
+			keys, err := store.List(prefix)
+			if err != nil {
+				returnError(2)
+				return
+			}
+
+                        var keysJson []byte
+                        if len(keys) > 0 {
+                                keysJson, err = json.Marshal(keys)
+                                if err != nil {
+                                        returnError(3)
+                                        return
+                                }
+                        } else {
+                                keysJson = []byte("[]")
+                        }
+
+                        valueBytes := append([]byte{ErrorCodeNoError}, keysJson...)
+			stack[0], err = p.WriteBytes(valueBytes)
+			if err != nil {
+				panic(err)
+			}
+		},
+		[]extism.ValueType{extism.ValueTypePTR},
+		[]extism.ValueType{extism.ValueTypePTR},
+	)
+
 	//extism.SetLogLevel(extism.LogLevelDebug)
 	extism.SetLogLevel(extism.LogLevelInfo)
 
@@ -234,19 +279,14 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 		kvRead,
 		kvWrite,
 		kvDelete,
+                kvList,
 	}
 	compiledPlugin, err := extism.NewCompiledPlugin(ctx, manifest, config, hostFunctions)
 	if err != nil {
 		return
 	}
 
-	moduleConfig := wazero.NewModuleConfig().
-		WithSysWalltime().
-		WithSysNanotime().
-		WithSysNanosleep().
-		WithRandSource(rand.Reader).
-		WithStderr(os.Stderr).
-		WithStdout(os.Stdout)
+	moduleConfig := createModuleConfig()
 
 	mux := http.NewServeMux()
 
@@ -258,6 +298,7 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 
 		plugin, err := compiledPlugin.Instance(ctx, pluginInstanceConfig)
 		if err != nil {
+			http.Error(w, err.Error(), 500)
 			return
 		}
 		defer plugin.Close(ctx)
@@ -351,11 +392,7 @@ func (h *Handler) LoginRedirect(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) getSession(r *http.Request) (session *Session) {
 
-	moduleConfig := wazero.NewModuleConfig().
-		WithSysWalltime().
-		WithSysNanotime().
-		WithSysNanosleep().
-		WithRandSource(rand.Reader)
+	moduleConfig := createModuleConfig()
 
 	pluginInstanceConfig := extism.PluginInstanceConfig{
 		ModuleConfig: moduleConfig,
@@ -439,6 +476,17 @@ func encodePluginReq(r *http.Request) (jsonBytes []byte, err error) {
 	}
 
 	return
+}
+
+func createModuleConfig() wazero.ModuleConfig {
+	moduleConfig := wazero.NewModuleConfig().
+		WithSysWalltime().
+		WithSysNanotime().
+		WithSysNanosleep().
+		WithRandSource(rand.Reader).
+		WithStderr(os.Stderr).
+		WithStdout(os.Stdout)
+        return moduleConfig
 }
 
 func printJson(data interface{}) {

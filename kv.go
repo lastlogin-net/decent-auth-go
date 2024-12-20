@@ -13,6 +13,7 @@ type KvStore interface {
 	Get(key string) (value []byte, err error)
 	Set(key string, value []byte) (err error)
 	Delete(key string) (err error)
+	List(prefix string) (keys []string, err error)
 }
 
 type MemoryKvStore struct {
@@ -146,4 +147,30 @@ func (s *kvStore) Delete(key string) error {
 	}
 
 	return nil
+}
+
+func (s *kvStore) List(prefix string) ([]string, error) {
+
+	var keys []string
+
+	stmt := fmt.Sprintf(`
+        SELECT key FROM %s WHERE key GLOB ? || '*'
+        `, s.tableName)
+	rows, err := s.db.Query(stmt, prefix)
+	if err != nil {
+		return nil, err
+	}
+        defer rows.Close()
+
+        for rows.Next() {
+                var key string
+                err = rows.Scan(&key)
+                if err != nil {
+                        return nil, err
+                }
+
+                keys = append(keys, key)
+        }
+
+	return keys, nil
 }
