@@ -83,7 +83,7 @@ func NewSqliteKvStore(opt ...*SqliteKvOptions) (store *kvStore, err error) {
 	}
 
 	if db == nil {
-		db, err = sql.Open("sqlite3", "./db.sqlite")
+		db, err = sql.Open("sqlite3", "./decentauth.sqlite")
 		if err != nil {
 			return nil, err
 		}
