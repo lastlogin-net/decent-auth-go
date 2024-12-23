@@ -180,7 +180,7 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 		[]extism.ValueType{},
 	)
 
-        kvList := extism.NewHostFunctionWithStack(
+	kvList := extism.NewHostFunctionWithStack(
 		"kv_list",
 		func(ctx context.Context, p *extism.CurrentPlugin, stack []uint64) {
 
@@ -204,18 +204,18 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 				return
 			}
 
-                        var keysJson []byte
-                        if len(keys) > 0 {
-                                keysJson, err = json.Marshal(keys)
-                                if err != nil {
-                                        returnError(3)
-                                        return
-                                }
-                        } else {
-                                keysJson = []byte("[]")
-                        }
+			var keysJson []byte
+			if len(keys) > 0 {
+				keysJson, err = json.Marshal(keys)
+				if err != nil {
+					returnError(3)
+					return
+				}
+			} else {
+				keysJson = []byte("[]")
+			}
 
-                        valueBytes := append([]byte{ErrorCodeNoError}, keysJson...)
+			valueBytes := append([]byte{ErrorCodeNoError}, keysJson...)
 			stack[0], err = p.WriteBytes(valueBytes)
 			if err != nil {
 				panic(err)
@@ -279,7 +279,7 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 		kvRead,
 		kvWrite,
 		kvDelete,
-                kvList,
+		kvList,
 	}
 	compiledPlugin, err := extism.NewCompiledPlugin(ctx, manifest, config, hostFunctions)
 	if err != nil {
@@ -486,7 +486,7 @@ func createModuleConfig() wazero.ModuleConfig {
 		WithRandSource(rand.Reader).
 		WithStderr(os.Stderr).
 		WithStdout(os.Stdout)
-        return moduleConfig
+	return moduleConfig
 }
 
 func printJson(data interface{}) {

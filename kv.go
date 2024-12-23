@@ -160,17 +160,17 @@ func (s *kvStore) List(prefix string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-        defer rows.Close()
+	defer rows.Close()
 
-        for rows.Next() {
-                var key string
-                err = rows.Scan(&key)
-                if err != nil {
-                        return nil, err
-                }
+	for rows.Next() {
+		var key string
+		err = rows.Scan(&key)
+		if err != nil {
+			return nil, err
+		}
 
-                keys = append(keys, key)
-        }
+		keys = append(keys, key)
+	}
 
 	return keys, nil
 }
