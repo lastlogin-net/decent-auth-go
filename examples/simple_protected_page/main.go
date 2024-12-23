@@ -53,16 +53,6 @@ func main() {
 					Type: decentauth.LoginMethodFediverse,
 				},
 			},
-			OIDCProviders: []decentauth.OIDCProvider{
-				decentauth.OIDCProvider{
-					Name: "LastLogin",
-					URI:  "https://lastlogin.net",
-				},
-				decentauth.OIDCProvider{
-					Name: "Obligator",
-					URI:  "https://auth.tn7.org",
-				},
-			},
 		},
 	})
 	exitOnError(err)

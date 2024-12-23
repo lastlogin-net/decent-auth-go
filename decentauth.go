@@ -61,12 +61,11 @@ type HandlerOptions struct {
 }
 
 type Config struct {
-	PathPrefix    string         `json:"path_prefix,omitempty"`
-	StoragePrefix string         `json:"storage_prefix,omitempty"`
-	AdminID       string         `json:"admin_id"`
-	IDHeaderName  string         `json:"id_header_name"`
-	LoginMethods  []LoginMethod  `json:"login_methods"`
-	OIDCProviders []OIDCProvider `json:"oidc_providers"`
+	PathPrefix    string        `json:"path_prefix,omitempty"`
+	StoragePrefix string        `json:"storage_prefix,omitempty"`
+	AdminID       string        `json:"admin_id"`
+	IDHeaderName  string        `json:"id_header_name"`
+	LoginMethods  []LoginMethod `json:"login_methods"`
 }
 
 type LoginMethod struct {
@@ -83,15 +82,6 @@ const (
 	LoginMethodATProto   = "ATProto"
 	LoginMethodFediverse = "Fediverse"
 )
-
-type OIDCProvider struct {
-	URI              string `json:"uri" db "uri"`
-	Name             string `json:"name,omitempty" db"name"`
-	ClientID         string `json:"client_id,omitempty" db:"client_id"`
-	ClientSecret     string `json:"client_secret,omitempty" db:"client_secret"`
-	AuthorizationURI string `json:"authorization_uri,omitempty" db:"authorization_uri"`
-	TokenURI         string `json:"token_uri,omitempty" db:"token_uri"`
-}
 
 func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 
