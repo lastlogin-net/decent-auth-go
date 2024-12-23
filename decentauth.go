@@ -70,16 +70,18 @@ type Config struct {
 }
 
 type LoginMethod struct {
-	Name string          `json:"name,omitempty" db"name"`
 	Type LoginMethodType `json:"type"`
+	Name string          `json:"name,omitempty" db"name"`
+	URI  string          `json:"uri,omitempty" db"uri"`
 }
 
 type LoginMethodType string
 
 const (
-	LoginMethodAdminCode = "admin-code"
-	LoginMethodATProto   = "atproto"
-	LoginMethodFediverse = "fediverse"
+	LoginMethodOIDC      = "OIDC"
+	LoginMethodAdminCode = "Admin Code"
+	LoginMethodATProto   = "ATProto"
+	LoginMethodFediverse = "Fediverse"
 )
 
 type OIDCProvider struct {

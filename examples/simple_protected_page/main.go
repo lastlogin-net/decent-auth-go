@@ -39,15 +39,17 @@ func main() {
 			AdminID:    *adminId,
 			LoginMethods: []decentauth.LoginMethod{
 				decentauth.LoginMethod{
-					Name: "Admin Code",
+					Type: decentauth.LoginMethodOIDC,
+					Name: "LastLogin",
+					URI:  "https://lastlogin.net",
+				},
+				decentauth.LoginMethod{
 					Type: decentauth.LoginMethodAdminCode,
 				},
 				decentauth.LoginMethod{
-					Name: "ATProto",
 					Type: decentauth.LoginMethodATProto,
 				},
 				decentauth.LoginMethod{
-					Name: "Fediverse",
 					Type: decentauth.LoginMethodFediverse,
 				},
 			},
