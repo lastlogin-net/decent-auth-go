@@ -28,20 +28,20 @@ func main() {
 			AdminID:    *adminId,
 			LoginMethods: []decentauth.LoginMethod{
 				decentauth.LoginMethod{
+					Type: decentauth.LoginMethodQRCode,
+				},
+				decentauth.LoginMethod{
 					Name: "LastLogin",
 					URI:  "https://lastlogin.net",
 					Type: decentauth.LoginMethodOIDC,
 				},
 				decentauth.LoginMethod{
-					Name: "Admin Code",
 					Type: decentauth.LoginMethodAdminCode,
 				},
 				decentauth.LoginMethod{
-					Name: "ATProto",
 					Type: decentauth.LoginMethodATProto,
 				},
 				decentauth.LoginMethod{
-					Name: "Fediverse",
 					Type: decentauth.LoginMethodFediverse,
 				},
 				decentauth.LoginMethod{

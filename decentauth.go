@@ -99,6 +99,7 @@ const (
 	LoginMethodATProto   = "ATProto"
 	LoginMethodFediverse = "Fediverse"
 	LoginMethodEmail     = "Email"
+	LoginMethodQRCode    = "QR Code"
 )
 
 func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
