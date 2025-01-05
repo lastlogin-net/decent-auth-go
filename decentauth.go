@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/smtp"
 	"net/url"
 	"os"
 	"strings"
@@ -40,6 +41,13 @@ type Session struct {
 	Id     string `json:"id"`
 }
 
+type EmailMessage struct {
+	From    string `json:"from"`
+	To      string `json:"to"`
+	Subject string `json:"subject"`
+	Text    string `json:"text"`
+}
+
 type loginCallback func(id string, w http.ResponseWriter, r *http.Request) (done bool, err error)
 
 type Handler struct {
@@ -66,12 +74,21 @@ type Config struct {
 	AdminID       string        `json:"admin_id"`
 	IDHeaderName  string        `json:"id_header_name"`
 	LoginMethods  []LoginMethod `json:"login_methods"`
+	SMTPConfig    *SMTPConfig   `json:"smtp_config"`
 }
 
 type LoginMethod struct {
 	Type LoginMethodType `json:"type"`
 	Name string          `json:"name,omitempty" db"name"`
 	URI  string          `json:"uri,omitempty" db"uri"`
+}
+
+type SMTPConfig struct {
+	ServerAddress string `json:"server_address"`
+	ServerPort    int16  `json:"server_port"`
+	Username      string `json:"username"`
+	Password      string `json:"password"`
+	SenderEmail   string `json:"sender_email"`
 }
 
 type LoginMethodType string
@@ -81,6 +98,7 @@ const (
 	LoginMethodAdminCode = "Admin Code"
 	LoginMethodATProto   = "ATProto"
 	LoginMethodFediverse = "Fediverse"
+	LoginMethodEmail     = "Email"
 )
 
 func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
@@ -217,6 +235,56 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 		[]extism.ValueType{extism.ValueTypePTR},
 	)
 
+	sendEmail := extism.NewHostFunctionWithStack(
+		"extism_send_email",
+		func(ctx context.Context, p *extism.CurrentPlugin, stack []uint64) {
+
+			if opt.Config.SMTPConfig == nil {
+				fmt.Println("No SMTP config")
+				return
+			}
+
+			emailJson, err := p.ReadBytes(stack[0])
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+
+			var msg EmailMessage
+
+			err = json.Unmarshal(emailJson, &msg)
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+
+			username := opt.Config.SMTPConfig.Username
+			password := opt.Config.SMTPConfig.Password
+			server := opt.Config.SMTPConfig.ServerAddress
+			auth := smtp.PlainAuth("", username, password, server)
+
+			bodyTemplate := "From: %s\r\n" +
+				"To: %s\r\n" +
+				"Subject: %s\r\n" +
+				"\r\n" +
+				"%s" +
+				"\r\n"
+			body := fmt.Sprintf(bodyTemplate, msg.From, msg.To, msg.Subject, msg.Text)
+
+			addr := fmt.Sprintf("%s:%d", server, opt.Config.SMTPConfig.ServerPort)
+
+			go func() {
+				err = smtp.SendMail(addr, auth, msg.From, []string{msg.To}, []byte(body))
+				if err != nil {
+					fmt.Println(err)
+					return
+				}
+			}()
+		},
+		[]extism.ValueType{extism.ValueTypePTR},
+		[]extism.ValueType{},
+	)
+
 	//extism.SetLogLevel(extism.LogLevelDebug)
 	extism.SetLogLevel(extism.LogLevelInfo)
 
@@ -272,6 +340,7 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 		kvWrite,
 		kvDelete,
 		kvList,
+		sendEmail,
 	}
 	compiledPlugin, err := extism.NewCompiledPlugin(ctx, manifest, config, hostFunctions)
 	if err != nil {
