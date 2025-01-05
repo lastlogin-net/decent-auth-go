@@ -18,7 +18,7 @@ import (
 	"github.com/tetratelabs/wazero"
 )
 
-//go:embed decent_auth.wasm
+//go:embed decentauth.wasm
 var fs embed.FS
 
 const ErrorCodeNoError = 0
@@ -103,7 +103,7 @@ const (
 
 func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 
-	storagePrefix := "decent_auth"
+	storagePrefix := "decentauth"
 
 	var store KvStore
 
@@ -288,7 +288,7 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 	//extism.SetLogLevel(extism.LogLevelDebug)
 	extism.SetLogLevel(extism.LogLevelInfo)
 
-	wasmFile, err := fs.Open("decent_auth.wasm")
+	wasmFile, err := fs.Open("decentauth.wasm")
 	if err != nil {
 		return
 	}
@@ -305,7 +305,7 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 	//}
 
 	//dir := filepath.Dir(curFilePath)
-	//wasmPath := filepath.Join(dir, "decent_auth.wasm")
+	//wasmPath := filepath.Join(dir, "decentauth.wasm")
 
 	configBytes, err := json.Marshal(opt.Config)
 	if err != nil {
