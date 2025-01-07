@@ -47,6 +47,9 @@ func main() {
 				decentauth.LoginMethod{
 					Type: decentauth.LoginMethodEmail,
 				},
+				decentauth.LoginMethod{
+					Type: "FedCM",
+				},
 			},
 			SMTPConfig: &decentauth.SMTPConfig{
 				ServerAddress: *serverAddress,
