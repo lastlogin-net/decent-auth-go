@@ -28,15 +28,12 @@ func main() {
 			AdminID:    *adminId,
 			LoginMethods: []decentauth.LoginMethod{
 				decentauth.LoginMethod{
-					Type: decentauth.LoginMethodQRCode,
-				},
-				decentauth.LoginMethod{
 					Name: "LastLogin",
 					URI:  "https://lastlogin.net",
 					Type: decentauth.LoginMethodOIDC,
 				},
 				decentauth.LoginMethod{
-					Type: decentauth.LoginMethodAdminCode,
+					Type: decentauth.LoginMethodQRCode,
 				},
 				decentauth.LoginMethod{
 					Type: decentauth.LoginMethodATProto,
@@ -49,6 +46,9 @@ func main() {
 				},
 				decentauth.LoginMethod{
 					Type: "FedCM",
+				},
+				decentauth.LoginMethod{
+					Type: decentauth.LoginMethodAdminCode,
 				},
 			},
 			SMTPConfig: &decentauth.SMTPConfig{
