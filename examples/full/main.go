@@ -18,12 +18,20 @@ func main() {
 	username := flag.String("username", "", "SMTP username")
 	password := flag.String("password", "", "SMTP password")
 	sender := flag.String("sender", "", "SMTP sender email")
+	dbPath := flag.String("db-path", "", "Database path")
 	flag.Parse()
 
 	authPrefix := "/auth"
 
+	kvStore, err := decentauth.NewSqliteKvStore(&decentauth.SqliteKvOptions{
+		Path: *dbPath,
+	})
+	exitOnError(err)
+
 	authHandler, err := decentauth.NewHandler(&decentauth.HandlerOptions{
+		KvStore: kvStore,
 		Config: decentauth.Config{
+			Runtime:    "Go",
 			PathPrefix: authPrefix,
 			AdminID:    *adminId,
 			LoginMethods: []decentauth.LoginMethod{

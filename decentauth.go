@@ -69,6 +69,7 @@ type HandlerOptions struct {
 }
 
 type Config struct {
+	Runtime       string        `json:"runtime,omitempty"`
 	PathPrefix    string        `json:"path_prefix,omitempty"`
 	StoragePrefix string        `json:"storage_prefix,omitempty"`
 	AdminID       string        `json:"admin_id"`

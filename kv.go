@@ -64,17 +64,23 @@ type kvStore struct {
 
 type SqliteKvOptions struct {
 	Db        *sql.DB
+	Path      string
 	TableName string
 }
 
 func NewSqliteKvStore(opt ...*SqliteKvOptions) (store *kvStore, err error) {
 
 	var db *sql.DB
+	path := "./decentauth.sqlite"
 	tableName := "kv"
 
 	if len(opt) > 0 {
 		if opt[0].Db != nil {
 			db = opt[0].Db
+		}
+
+		if opt[0].Path != "" {
+			path = opt[0].Path
 		}
 
 		if opt[0].TableName != "" {
@@ -83,7 +89,7 @@ func NewSqliteKvStore(opt ...*SqliteKvOptions) (store *kvStore, err error) {
 	}
 
 	if db == nil {
-		db, err = sql.Open("sqlite3", "./decentauth.sqlite")
+		db, err = sql.Open("sqlite3", path)
 		if err != nil {
 			return nil, err
 		}
