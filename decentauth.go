@@ -74,6 +74,7 @@ type Config struct {
 	StoragePrefix string        `json:"storage_prefix,omitempty"`
 	AdminID       string        `json:"admin_id"`
 	IDHeaderName  string        `json:"id_header_name"`
+	BehindProxy   bool          `json:"behind_proxy"`
 	LoginMethods  []LoginMethod `json:"login_methods"`
 	SMTPConfig    *SMTPConfig   `json:"smtp_config"`
 }

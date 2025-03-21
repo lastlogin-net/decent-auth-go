@@ -31,9 +31,10 @@ func main() {
 	authHandler, err := decentauth.NewHandler(&decentauth.HandlerOptions{
 		KvStore: kvStore,
 		Config: decentauth.Config{
-			Runtime:    "Go",
-			PathPrefix: authPrefix,
-			AdminID:    *adminId,
+			Runtime:     "Go",
+			PathPrefix:  authPrefix,
+			AdminID:     *adminId,
+			BehindProxy: true,
 			LoginMethods: []decentauth.LoginMethod{
 				decentauth.LoginMethod{
 					Name: "LastLogin",
