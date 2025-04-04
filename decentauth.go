@@ -3,7 +3,6 @@ package decentauth
 import (
 	"context"
 	"crypto/rand"
-	"embed"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -15,11 +14,9 @@ import (
 	"strings"
 
 	"github.com/extism/go-sdk"
+	build "github.com/lastlogin-net/decent-auth-build"
 	"github.com/tetratelabs/wazero"
 )
-
-//go:embed decentauth.wasm
-var fs embed.FS
 
 const ErrorCodeNoError = 0
 
@@ -291,16 +288,6 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 	//extism.SetLogLevel(extism.LogLevelDebug)
 	extism.SetLogLevel(extism.LogLevelInfo)
 
-	wasmFile, err := fs.Open("decentauth.wasm")
-	if err != nil {
-		return
-	}
-
-	wasmBytes, err := io.ReadAll(wasmFile)
-	if err != nil {
-		return
-	}
-
 	//_, curFilePath, _, ok := runtime.Caller(0)
 	//if !ok {
 	//	err = errors.New("runtime.Caller failed")
@@ -321,7 +308,7 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 			//	Path: wasmPath,
 			//},
 			extism.WasmData{
-				Data: wasmBytes,
+				Data: build.WasmBytes,
 			},
 		},
 		AllowedHosts: []string{"*"},
