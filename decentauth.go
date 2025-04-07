@@ -354,7 +354,8 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 		}
 		defer plugin.Close(ctx)
 
-		jsonBytes, err := encodePluginReq(r)
+		consumeBody := true
+		jsonBytes, err := encodePluginReq(r, consumeBody)
 		if err != nil {
 			http.Error(w, err.Error(), 500)
 			return
@@ -457,7 +458,8 @@ func (h *Handler) getSession(r *http.Request) (session *Session) {
 	}
 	defer plugin.Close(ctx)
 
-	jsonBytes, err := encodePluginReq(r)
+	consumeBody := false
+	jsonBytes, err := encodePluginReq(r, consumeBody)
 	if err != nil {
 		return
 	}
@@ -498,15 +500,19 @@ func getReturnTarget(r *http.Request) (string, error) {
 	return rt, nil
 }
 
-func encodePluginReq(r *http.Request) (jsonBytes []byte, err error) {
+func encodePluginReq(r *http.Request, consumeBody bool) (jsonBytes []byte, err error) {
 	// TODO: should we be passing in the auth prefix as well?
 	uri := fmt.Sprintf("http://%s%s", r.Host, r.URL.RequestURI())
 
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		return
+	var body []byte
+
+	if consumeBody {
+		body, err = io.ReadAll(r.Body)
+		if err != nil {
+			return
+		}
+		r.Body.Close()
 	}
-	r.Body.Close()
 
 	headers := make(map[string][]string)
 
