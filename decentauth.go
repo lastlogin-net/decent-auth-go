@@ -321,9 +321,13 @@ func NewHandler(opt *HandlerOptions) (h *Handler, err error) {
 	}
 
 	ctx := context.Background()
+
+	wazeroRuntimeConfig := wazero.NewRuntimeConfigInterpreter()
+
 	config := extism.PluginConfig{
 		EnableWasi:                true,
 		EnableHttpResponseHeaders: true,
+		RuntimeConfig:             wazeroRuntimeConfig,
 	}
 	hostFunctions := []extism.HostFunction{
 		kvRead,
