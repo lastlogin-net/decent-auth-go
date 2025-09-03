@@ -20,6 +20,8 @@ import (
 
 const ErrorCodeNoError = 0
 
+const IDTypeEmail = "Email"
+
 type HttpRequest struct {
 	Url     string      `json:"url"`
 	Headers http.Header `json:"headers"`
@@ -36,6 +38,16 @@ type HttpResponse struct {
 type Session struct {
 	IdType string `json:"id_type"`
 	Id     string `json:"id"`
+}
+
+type CreateSessionRequest struct {
+	IdType string `json:"id_type"`
+	Id     string `json:"id"`
+}
+
+type CreateSessionResult struct {
+	Token string `json:"token"`
+	Code  string `json:"code"`
 }
 
 type EmailMessage struct {
@@ -485,6 +497,42 @@ func (h *Handler) getSession(r *http.Request) (session *Session) {
 	}
 
 	session = &res
+
+	return
+}
+
+func (h *Handler) CreateSession(sesh CreateSessionRequest) (res CreateSessionResult, err error) {
+	moduleConfig := createModuleConfig()
+
+	pluginInstanceConfig := extism.PluginInstanceConfig{
+		ModuleConfig: moduleConfig,
+	}
+
+	ctx := context.Background()
+
+	plugin, err := h.compiledPlugin.Instance(ctx, pluginInstanceConfig)
+	if err != nil {
+		return
+	}
+	defer plugin.Close(ctx)
+
+	jsonBytes, err := json.Marshal(sesh)
+	if err != nil {
+		return
+	}
+
+	fmt.Println("here22")
+	fmt.Println(string(jsonBytes))
+
+	_, resJson, err := plugin.Call("extism_create_session", jsonBytes)
+	if err != nil {
+		return
+	}
+
+	err = json.Unmarshal(resJson, &res)
+	if err != nil {
+		return
+	}
 
 	return
 }
