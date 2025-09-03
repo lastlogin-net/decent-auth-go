@@ -521,9 +521,6 @@ func (h *Handler) CreateSession(sesh CreateSessionRequest) (res CreateSessionRes
 		return
 	}
 
-	fmt.Println("here22")
-	fmt.Println(string(jsonBytes))
-
 	_, resJson, err := plugin.Call("extism_create_session", jsonBytes)
 	if err != nil {
 		return
