@@ -38,11 +38,13 @@ type HttpResponse struct {
 type Session struct {
 	IdType string `json:"id_type"`
 	Id     string `json:"id"`
+	CustomData map[string]string `json:"custom_data"`
 }
 
 type CreateSessionRequest struct {
 	IdType string `json:"id_type"`
 	Id     string `json:"id"`
+	CustomData map[string]string `json:"custom_data"`
 }
 
 type CreateSessionResult struct {
