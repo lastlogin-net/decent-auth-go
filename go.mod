@@ -7,7 +7,7 @@ go 1.24.1
 
 require (
 	github.com/extism/go-sdk v1.6.2-0.20241121002538-bef00f39873e
-	github.com/lastlogin-net/decent-auth-build v0.0.0-20250904173141-3ee6bb444f9a
+	github.com/lastlogin-net/decent-auth-build v0.0.0-20260929134918-a4e64312b206
 	github.com/mattn/go-sqlite3 v1.14.24
 	github.com/philippgille/gokv/file v0.7.0
 	github.com/tetratelabs/wazero v1.8.1

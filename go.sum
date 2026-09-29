@@ -18,6 +18,8 @@ github.com/lastlogin-net/decent-auth-build v0.0.0-20250408135533-7a6070c673e3 h1
 github.com/lastlogin-net/decent-auth-build v0.0.0-20250408135533-7a6070c673e3/go.mod h1:JUUikq2P0tUaEjw7nUjCVLYvJpUPeDazP6s2/SVsLSo=
 github.com/lastlogin-net/decent-auth-build v0.0.0-20250904173141-3ee6bb444f9a h1:q96NObEK6vSw8M3A0u2bXG9uoJ2ihfPTVVxLnAR32KA=
 github.com/lastlogin-net/decent-auth-build v0.0.0-20250904173141-3ee6bb444f9a/go.mod h1:JUUikq2P0tUaEjw7nUjCVLYvJpUPeDazP6s2/SVsLSo=
+github.com/lastlogin-net/decent-auth-build v0.0.0-20260929134918-a4e64312b206 h1:7PDwWq7dTzdSLlIbr0CPfrMdSgwcq0kvPmMCkvZjLvM=
+github.com/lastlogin-net/decent-auth-build v0.0.0-20260929134918-a4e64312b206/go.mod h1:JUUikq2P0tUaEjw7nUjCVLYvJpUPeDazP6s2/SVsLSo=
 github.com/mattn/go-sqlite3 v1.14.24 h1:tpSp2G2KyMnnQu99ngJ47EIkWVmliIizyZBfPrBWDRM=
 github.com/mattn/go-sqlite3 v1.14.24/go.mod h1:Uh1q+B4BYcTPb+yiD3kU8Ct7aC0hY9fxUwlHK0RXw+Y=
 github.com/philippgille/gokv v0.7.0 h1:rQSIQspete82h78Br7k7rKUZ8JYy/hWlwzm/W5qobPI=
